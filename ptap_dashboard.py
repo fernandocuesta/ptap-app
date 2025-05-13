@@ -56,8 +56,8 @@ if menu == "➕ Ingreso de muestra":
         alerta.append("⚠️ pH fuera de rango ideal (6.5 - 8.5)")
     if turbidez is not None and turbidez > 5:
         alerta.append("⚠️ Turbidez mayor a 5 NTU")
-    if cloro < 0.2 or cloro > 1.5:
-        alerta.append("⚠️ Cloro fuera del rango ideal (0.2 - 1.5 mg/L)")
+    if cloro < 0.5 or cloro > 1.5:
+        alerta.append("⚠️ Cloro fuera del rango ideal (0.5 - 1.5 mg/L)")
     for msg in alerta:
         st.warning(msg)
 
