@@ -26,7 +26,7 @@ if "data" not in st.session_state:
     st.session_state.data = cargar_datos()
 
 tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
-locaciones = ["Cocina", "Bebedero 1", "Bebedero 2", "Bebedero 3"]
+locaciones = ['L95-AC-SUR-COM2', 'L95-AC-SUR-PTAP', 'L95-AC-SUR-GC', 'L95-AC-SUR-HSE-01', 'L95-AC-SUR-HSE-02', 'L95-AC-SUR-PROD']
 
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📤 Exportar PDF"])
