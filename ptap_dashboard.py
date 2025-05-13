@@ -100,7 +100,7 @@ elif menu == "📊 KPIs y Análisis":
 
     ph_color = "🟢" if 6.5 <= ph_avg <= 8.5 else "🔴"
     tur_color = "🟢" if tur_avg <= 5 else "🔴"
-    clo_color = "🟢" if 0.2 <= clo_avg <= 1.5 else "🔴"
+    clo_color = "🟢" if 0.5 <= clo_avg <= 1.5 else "🔴"
 
     kpi1, kpi2, kpi3 = st.columns(3)
     with kpi1: st.metric(f"{ph_color} Prom. pH (30d)", ph_avg)
