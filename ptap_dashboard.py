@@ -25,7 +25,7 @@ def guardar_datos(df):
 if "data" not in st.session_state:
     st.session_state.data = cargar_datos()
 
-supervisores = ["Fernando Cuesta", "Felix Cuadros"]
+tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
 locaciones = ["Cocina", "Bebedero 1", "Bebedero 2", "Bebedero 3"]
 
 st.sidebar.header("📂 Navegación")
@@ -37,7 +37,7 @@ if menu == "➕ Ingreso de muestra":
     with col1:
         fecha = st.date_input("Fecha", value=datetime.today())
         hora = st.time_input("Hora", value=datetime.now().time())
-        supervisor = st.selectbox("👷 Supervisor", supervisores)
+        tecnico = st.selectbox("👷 Técnico", tecnico)
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
     with col2:
         if locacion == "Cocina":
