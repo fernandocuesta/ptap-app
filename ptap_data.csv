@@ -1,7 +1,1 @@
-Fecha,Hora,Supervisor,Locación,pH,Turbidez (NTU),Cloro Residual (mg/L),Observaciones,Foto
-2025-05-09,14:04,Fernando Cuesta,Cocina,7.5,0.0,0.5,,
-2025-05-09,14:05,Fernando Cuesta,Bebedero 1,7.5,1.0,0.5,,
-2025-05-09,14:05,Fernando Cuesta,Bebedero 2,8.0,2.0,1.0,,
-2025-05-11,14:05,Fernando Cuesta,Bebedero 2,7.0,1.5,0.8,,
-2025-05-11,10:49,Fernando Cuesta,Cocina,7.0,2.0,2.0,,
-2025-05-11,10:52,Fernando Cuesta,Bebedero 1,8.0,2.0,1.5,,newplot.png
+Fecha,Hora,Técnico,Locación,pH,Turbidez (NTU),Cloro Residual (mg/L),Observaciones,Foto
