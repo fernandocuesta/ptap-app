@@ -1,12 +1,12 @@
 
 import streamlit as st
 import pandas as pd
-import os
-from datetime import datetime
-from pytz import timezone
+from datetime import datetime, time
 import plotly.express as px
+import os
 from fpdf import FPDF
 from PIL import Image
+import pytz
 
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 
@@ -43,12 +43,13 @@ menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Anális
 if menu == "➕ Ingreso de muestra":
     st.title("➕ Registro de nueva muestra")
     col1, col2 = st.columns(2)
-    lima = timezone("America/Lima")
-    now = datetime.now(lima)
+
+    lima_tz = pytz.timezone("America/Lima")
+    ahora = datetime.now(lima_tz)
+
     with col1:
-        fecha = st.date_input("📅 Fecha", value=now.date(), max_value=now.date())
-        hora = now.time().replace(microsecond=0)
-        st.text(f"🕒 Hora actual: {hora}")
+        fecha = st.date_input("📅 Fecha", value=ahora.date(), max_value=ahora.date())
+        hora = st.time_input("⏰ Hora", value=ahora.time())
         tecnico = st.selectbox("👷 Técnico", tecnicos)
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
     with col2:
@@ -63,21 +64,21 @@ if menu == "➕ Ingreso de muestra":
         alerta.append("⚠️ pH fuera de rango ideal (6.5 - 8.5)")
     if turbidez > 5:
         alerta.append("⚠️ Turbidez mayor a 5 NTU")
-    if cloro < 0.2 or cloro > 1.5:
-        alerta.append("⚠️ Cloro fuera del rango ideal (0.2 - 1.5 mg/L)")
+    if cloro < 0.5 or cloro > 1.5:
+        alerta.append("⚠️ Cloro fuera del rango ideal (0.5 - 1.5 mg/L)")
     for msg in alerta:
         st.warning(msg)
 
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto:
-            nombre_foto = f"{fecha.strftime('%Y%m%d')}_{hora.strftime('%H%M%S')}_{locacion.replace(' ', '_')}_{foto.name}"
+            nombre_foto = f"{fecha.strftime('%Y%m%d')}_{hora.strftime('%H%M')}_{locacion.replace(' ', '_')}_{foto.name}"
             with open(os.path.join(FOTOS_DIR, nombre_foto), "wb") as f:
                 f.write(foto.read())
 
         nueva = {
             "Fecha": fecha.strftime("%Y-%m-%d"),
-            "Hora": hora.strftime("%H:%M:%S"),
+            "Hora": hora.strftime("%H:%M"),
             "Técnico": tecnico,
             "Locación": locacion,
             "pH": ph,
@@ -94,3 +95,31 @@ if menu == "➕ Ingreso de muestra":
             st.session_state.data = pd.concat([df, pd.DataFrame([nueva])], ignore_index=True)
             guardar_datos(st.session_state.data)
             st.success("✅ Registro guardado correctamente.")
+
+elif menu == "📊 KPIs y Análisis":
+    st.title("📊 KPIs y Análisis de datos por locación")
+    df = st.session_state.data.copy()
+    df["Fecha"] = pd.to_datetime(df["Fecha"])
+
+    st.markdown("### 🔎 Seleccionar locación para visualizar")
+    locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].unique()))
+
+    df_filtrado = df[df["Locación"] == locacion_seleccionada]
+    ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)]
+
+    ph_avg = round(ultimos_30["pH"].mean(), 2)
+    tur_avg = round(ultimos_30["Turbidez (NTU)"].mean(), 2)
+    clo_avg = round(ultimos_30["Cloro Residual (mg/L)"].mean(), 2)
+
+    ph_color = "🟢" if 6.5 <= ph_avg <= 8.5 else "🔴"
+    tur_color = "🟢" if tur_avg <= 5 else "🔴"
+    clo_color = "🟢" if 0.5 <= clo_avg <= 1.5 else "🔴"
+
+    k1, k2, k3 = st.columns(3)
+    with k1: st.metric(f"{ph_color} Prom. pH", ph_avg)
+    with k2: st.metric(f"{tur_color} Prom. Turbidez", tur_avg)
+    with k3: st.metric(f"{clo_color} Prom. Cloro", clo_avg)
+
+    for param in ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]:
+        fig = px.line(df_filtrado, x="Fecha", y=param, markers=True, title=f"{param} en {locacion_seleccionada}")
+        st.plotly_chart(fig, use_container_width=True)
