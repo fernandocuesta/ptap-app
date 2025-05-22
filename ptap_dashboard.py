@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -100,10 +99,21 @@ elif menu == "📄 Historial":
     df = st.session_state.data.copy()
     if not df.empty:
         col1, col2 = st.columns(2)
+        # Corrección robusta aquí
+        min_fecha = df["Fecha"].min()
+        max_fecha = df["Fecha"].max()
+        if pd.isnull(min_fecha):
+            min_fecha = datetime.now().date()
+        else:
+            min_fecha = min_fecha.date()
+        if pd.isnull(max_fecha):
+            max_fecha = datetime.now().date()
+        else:
+            max_fecha = max_fecha.date()
         with col1:
-            fecha_ini = st.date_input("Desde", value=df["Fecha"].min().date())
+            fecha_ini = st.date_input("Desde", value=min_fecha)
         with col2:
-            fecha_fin = st.date_input("Hasta", value=df["Fecha"].max().date())
+            fecha_fin = st.date_input("Hasta", value=max_fecha)
         filtrado = df[(df["Fecha"] >= pd.to_datetime(fecha_ini)) & (df["Fecha"] <= pd.to_datetime(fecha_fin))]
         st.dataframe(filtrado)
     else:
