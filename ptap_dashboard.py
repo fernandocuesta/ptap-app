@@ -21,7 +21,6 @@ worksheet = sh.sheet1
 def leer_datos():
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
-    # Ajuste: convierte la columna Fecha a datetime para filtrar y analizar
     if not df.empty and "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
     return df
