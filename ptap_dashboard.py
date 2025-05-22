@@ -109,27 +109,31 @@ elif menu == "📊 KPIs y Análisis":
             else:
                 return "#ff4136"  # rojo
 
-        # --- Tabla con valores individuales y semáforo (sin mostrar columnas de color) ---
         if not ultimos_30.empty:
             st.subheader("Valores individuales últimos 30 días")
-            tabla = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
+            # Crea tabla auxiliar con colores
+            tabla_aux = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
+            tabla_aux["pH Color"] = tabla_aux["pH"].apply(color_ph)
+            tabla_aux["Turbidez Color"] = tabla_aux["Turbidez (NTU)"].apply(color_turbidez)
+            tabla_aux["Cloro Color"] = tabla_aux["Cloro Residual (mg/L)"].apply(color_cloro)
 
             def style_row(row):
                 return [
-                    '',  # Fecha (sin color)
-                    f'background-color: {color_ph(row["pH"])}; color: white;',
-                    f'background-color: {color_turbidez(row["Turbidez (NTU)"])}; color: white;',
-                    f'background-color: {color_cloro(row["Cloro Residual (mg/L)"])}; color: white;',
+                    '',  # Fecha
+                    f'background-color: {row["pH Color"]}; color: white;',
+                    f'background-color: {row["Turbidez Color"]}; color: white;',
+                    f'background-color: {row["Cloro Color"]}; color: white;',
                 ]
 
-            # Renombra columnas para presentación final
-            tabla.columns = ["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]
+            # Aplica el styling solo sobre las columnas visibles
+            tabla_final = tabla_aux[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
+            tabla_final.columns = ["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]  # nombres exactos
 
             st.dataframe(
-                tabla.style.apply(style_row, axis=1)
+                tabla_final.style.apply(style_row, axis=1)
             )
 
-            # --- Gráfico de pH con rangos de referencia ---
+            # --- Gráficos (idéntico a antes) ---
             st.subheader("Histórico de pH (con rangos)")
             fig_ph = go.Figure()
             fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
@@ -140,7 +144,6 @@ elif menu == "📊 KPIs y Análisis":
             fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
             st.plotly_chart(fig_ph, use_container_width=True)
 
-            # --- Gráfico de Turbidez con rango de referencia ---
             st.subheader("Histórico de Turbidez (NTU) (con rango)")
             fig_turb = go.Figure()
             fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
@@ -150,16 +153,12 @@ elif menu == "📊 KPIs y Análisis":
             fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
             st.plotly_chart(fig_turb, use_container_width=True)
 
-            # --- Gráfico de Cloro con rango de referencia ajustado ---
             st.subheader("Histórico de Cloro Residual (mg/L) (con rango)")
             fig_cloro = go.Figure()
             fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
-            # Banda verde (óptimo)
             fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            # Banda amarilla (advertencia)
             fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
             fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
-            # Banda roja (fuera de rango)
             fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
             fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
             fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
