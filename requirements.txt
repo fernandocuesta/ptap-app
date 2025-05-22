@@ -3,3 +3,5 @@ pandas
 plotly
 fpdf
 pillow
+gspread
+google-auth
