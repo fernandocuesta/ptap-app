@@ -119,16 +119,22 @@ elif menu == "📊 KPIs y Análisis":
 
             def style_row(row):
                 return [
-                    '',
+                    '',  # Fecha (sin color)
                     f'background-color: {row["pH Color"]}; color: white;',
                     f'background-color: {row["Turbidez Color"]}; color: white;',
                     f'background-color: {row["Cloro Color"]}; color: white;',
+                    '', '', ''  # Para evitar error si hay columnas extra
                 ]
 
-            st.dataframe(
-                styled_table[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]]
-                .style.apply(style_row, axis=1)
-            )
+            # Aplica el estilo sobre todas las columnas y oculta las auxiliares
+            styled = styled_table.style.apply(style_row, axis=1)
+            try:
+                styled = styled.hide(axis="columns", subset=["pH Color", "Turbidez Color", "Cloro Color"])
+            except Exception:
+                # Para compatibilidad con pandas <1.4
+                styled = styled.hide_columns(["pH Color", "Turbidez Color", "Cloro Color"])
+
+            st.dataframe(styled)
 
             # --- Gráfico de pH con rangos de referencia ---
             st.subheader("Histórico de pH (con rangos)")
