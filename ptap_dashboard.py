@@ -1,29 +1,33 @@
 import streamlit as st
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
-import os
 
-st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
+# --- Google Sheets Authentication ---
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"], scopes=scope
+)
+gc = gspread.authorize(creds)
+SHEET_URL = "https://docs.google.com/spreadsheets/d/19AZGamcT9AIkV6aR4Xs7CCObgBo8xKFlv4eXfrAUJuU/edit?usp=sharing"
+sh = gc.open_by_url(SHEET_URL)
+worksheet = sh.sheet1
 
-DATA_FILE = "ptap_data.csv"
-FOTOS_DIR = "fotos"
-os.makedirs(FOTOS_DIR, exist_ok=True)
+def leer_datos():
+    data = worksheet.get_all_records()
+    df = pd.DataFrame(data)
+    # Ajuste: convierte la columna Fecha a datetime para filtrar y analizar
+    if not df.empty and "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    return df
 
-def cargar_datos():
-    try:
-        df = pd.read_csv(DATA_FILE)
-        if 'Fecha' in df.columns:
-            df['Fecha'] = pd.to_datetime(df['Fecha'])
-        return df
-    except Exception:
-        return pd.DataFrame(columns=["Fecha", "Hora", "Técnico", "Locación", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)", "Observaciones", "Foto"])
-
-def guardar_datos(df):
-    df.to_csv(DATA_FILE, index=False)
-
-if "data" not in st.session_state:
-    st.session_state.data = cargar_datos()
+def guardar_muestra(muestra):
+    worksheet.append_row(muestra)
 
 tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
 locaciones = [
@@ -31,6 +35,7 @@ locaciones = [
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
 ]
 
+st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
 
@@ -49,44 +54,38 @@ if menu == "➕ Ingreso de muestra":
         turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
         cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
+    # Foto: sólo se registra el nombre en la sheet, NO se guarda archivo
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
 
     if st.button("Guardar muestra"):
         nombre_foto = ""
-        if foto:
+        if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
             nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
-            with open(os.path.join(FOTOS_DIR, nombre_foto), "wb") as f:
-                f.write(foto.read())
-
-        nueva = {
-            "Fecha": fecha,
-            "Hora": hora,
-            "Técnico": tecnico,
-            "Locación": locacion,
-            "pH": ph,
-            "Turbidez (NTU)": turbidez,
-            "Cloro Residual (mg/L)": cloro,
-            "Observaciones": observaciones,
-            "Foto": nombre_foto
-        }
-
-        df = st.session_state.data
-        st.session_state.data = pd.concat([df, pd.DataFrame([nueva])], ignore_index=True)
-        guardar_datos(st.session_state.data)
-        st.success("✅ Registro guardado correctamente.")
+            # El archivo NO se almacena, solo el nombre para referencia
+        muestra = [
+            fecha.strftime("%Y-%m-%d"),
+            hora,
+            tecnico,
+            locacion,
+            ph,
+            turbidez,
+            cloro,
+            observaciones,
+            nombre_foto
+        ]
+        guardar_muestra(muestra)
+        st.success("✅ Registro guardado en Google Sheets correctamente.")
 
 elif menu == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
-    df = st.session_state.data.copy()
+    df = leer_datos()
     if not df.empty:
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
-
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)]
         ph_avg = round(ultimos_30["pH"].mean(), 2)
         tur_avg = round(ultimos_30["Turbidez (NTU)"].mean(), 2)
         clo_avg = round(ultimos_30["Cloro Residual (mg/L)"].mean(), 2)
-
         k1, k2, k3 = st.columns(3)
         k1.metric("Prom. pH (30d)", ph_avg)
         k2.metric("Prom. Turbidez (30d)", tur_avg)
@@ -96,10 +95,9 @@ elif menu == "📊 KPIs y Análisis":
 
 elif menu == "📄 Historial":
     st.title("📄 Historial de muestras registradas")
-    df = st.session_state.data.copy()
+    df = leer_datos()
     if not df.empty:
         col1, col2 = st.columns(2)
-        # Corrección robusta aquí
         min_fecha = df["Fecha"].min()
         max_fecha = df["Fecha"].max()
         if pd.isnull(min_fecha):
@@ -121,7 +119,7 @@ elif menu == "📄 Historial":
 
 elif menu == "📥 Exportar":
     st.title("📥 Exportar registros en Excel")
-    df = st.session_state.data.copy()
+    df = leer_datos()
     if not df.empty:
         st.download_button("📄 Descargar Excel", data=df.to_csv(index=False).encode("utf-8"), file_name="ptap_registros.csv", mime="text/csv")
     else:
