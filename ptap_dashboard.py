@@ -84,14 +84,14 @@ elif menu == "📊 KPIs y Análisis":
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
 
-        # --- Funciones de semáforo para KPIs individuales ---
+        # Funciones de color
         def color_ph(val):
             if 6.5 <= val <= 8.5:
-                return "#2ecc40"  # verde
+                return "#2ecc40"
             elif 6.0 <= val < 6.5 or 8.5 < val <= 9.0:
-                return "#ffdc00"  # amarillo
+                return "#ffdc00"
             else:
-                return "#ff4136"  # rojo
+                return "#ff4136"
 
         def color_turbidez(val):
             if val < 5:
@@ -103,19 +103,19 @@ elif menu == "📊 KPIs y Análisis":
 
         def color_cloro(val):
             if 0.5 <= val <= 1.5:
-                return "#2ecc40"  # verde
+                return "#2ecc40"
             elif (0.2 <= val < 0.5) or (1.5 < val <= 2.0):
-                return "#ffdc00"  # amarillo
+                return "#ffdc00"
             else:
-                return "#ff4136"  # rojo
+                return "#ff4136"
 
         if not ultimos_30.empty:
             st.subheader("Valores individuales últimos 30 días")
-            # Crea tabla auxiliar con colores
-            tabla_aux = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
-            tabla_aux["pH Color"] = tabla_aux["pH"].apply(color_ph)
-            tabla_aux["Turbidez Color"] = tabla_aux["Turbidez (NTU)"].apply(color_turbidez)
-            tabla_aux["Cloro Color"] = tabla_aux["Cloro Residual (mg/L)"].apply(color_cloro)
+            # Prepara tabla con colores auxiliares
+            tabla = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
+            tabla["pH Color"] = tabla["pH"].apply(color_ph)
+            tabla["Turbidez Color"] = tabla["Turbidez (NTU)"].apply(color_turbidez)
+            tabla["Cloro Color"] = tabla["Cloro Residual (mg/L)"].apply(color_cloro)
 
             def style_row(row):
                 return [
@@ -123,17 +123,24 @@ elif menu == "📊 KPIs y Análisis":
                     f'background-color: {row["pH Color"]}; color: white;',
                     f'background-color: {row["Turbidez Color"]}; color: white;',
                     f'background-color: {row["Cloro Color"]}; color: white;',
+                    '', '', ''  # Si alguna versión pide más elementos
                 ]
 
-            # Aplica el styling solo sobre las columnas visibles
-            tabla_final = tabla_aux[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
-            tabla_final.columns = ["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]  # nombres exactos
+            # Aplica el style sobre la tabla completa, luego oculta columnas auxiliares
+            styler = tabla.style.apply(style_row, axis=1)
+            # Compatibilidad máxima: usa hide_columns si existe
+            try:
+                styler = styler.hide(axis="columns", subset=["pH Color", "Turbidez Color", "Cloro Color"])
+            except Exception:
+                try:
+                    styler = styler.hide_columns(["pH Color", "Turbidez Color", "Cloro Color"])
+                except Exception:
+                    # Si tampoco funciona, simplemente muestra las columnas (pocas filas, tolerable)
+                    pass
 
-            st.dataframe(
-                tabla_final.style.apply(style_row, axis=1)
-            )
+            st.dataframe(styler)
 
-            # --- Gráficos (idéntico a antes) ---
+            # Los gráficos van igual que antes...
             st.subheader("Histórico de pH (con rangos)")
             fig_ph = go.Figure()
             fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
