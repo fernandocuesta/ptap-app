@@ -6,6 +6,10 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
+# --- Configura credenciales aquí ---
+USUARIO = "admin"
+PASSWORD = "1234"
+
 # --- Google Sheets Authentication ---
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -35,10 +39,33 @@ locaciones = [
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
 ]
 
+# --------- LOGIN FUNCTION ----------
+def login():
+    st.title("Acceso restringido")
+    usuario = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Ingresar"):
+        if usuario == USUARIO and password == PASSWORD:
+            st.session_state['logueado'] = True
+            st.success("Acceso concedido.")
+            st.experimental_rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+    st.stop()
+
+# --------- MENÚ Y CONTROL DE ACCESO ----------
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
 
+# Las secciones que requieren login
+secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
+
+if menu in secciones_privadas:
+    if 'logueado' not in st.session_state or not st.session_state['logueado']:
+        login()
+
+# --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
     st.title("➕ Registro de nueva muestra")
     col1, col2 = st.columns(2)
@@ -54,14 +81,12 @@ if menu == "➕ Ingreso de muestra":
         turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
         cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
-    # Foto: sólo se registra el nombre en la sheet, NO se guarda archivo
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
 
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
             nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
-            # El archivo NO se almacena, solo el nombre para referencia
         muestra = [
             fecha.strftime("%Y-%m-%d"),
             hora,
@@ -76,6 +101,7 @@ if menu == "➕ Ingreso de muestra":
         guardar_muestra(muestra)
         st.success("✅ Registro guardado en Google Sheets correctamente.")
 
+# --------- SECCIÓN KPIs y ANÁLISIS (PÚBLICA) ----------
 elif menu == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
     df = leer_datos() if 'leer_datos' in globals() else st.session_state.data.copy()
@@ -120,6 +146,7 @@ elif menu == "📊 KPIs y Análisis":
     else:
         st.info("No hay datos registrados.")
 
+# --------- SECCIÓN HISTORIAL (privada) ----------
 elif menu == "📄 Historial":
     st.title("📄 Historial de muestras registradas")
     df = leer_datos()
@@ -144,6 +171,7 @@ elif menu == "📄 Historial":
     else:
         st.warning("No hay registros para mostrar.")
 
+# --------- SECCIÓN EXPORTAR (privada) ----------
 elif menu == "📥 Exportar":
     st.title("📥 Exportar registros en Excel")
     df = leer_datos()
