@@ -109,32 +109,25 @@ elif menu == "📊 KPIs y Análisis":
             else:
                 return "#ff4136"  # rojo
 
-        # --- Tabla con valores individuales y semáforo ---
+        # --- Tabla con valores individuales y semáforo (sin mostrar columnas de color) ---
         if not ultimos_30.empty:
             st.subheader("Valores individuales últimos 30 días")
-            styled_table = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
-            styled_table["pH Color"] = styled_table["pH"].apply(color_ph)
-            styled_table["Turbidez Color"] = styled_table["Turbidez (NTU)"].apply(color_turbidez)
-            styled_table["Cloro Color"] = styled_table["Cloro Residual (mg/L)"].apply(color_cloro)
+            tabla = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
 
             def style_row(row):
                 return [
                     '',  # Fecha (sin color)
-                    f'background-color: {row["pH Color"]}; color: white;',
-                    f'background-color: {row["Turbidez Color"]}; color: white;',
-                    f'background-color: {row["Cloro Color"]}; color: white;',
-                    '', '', ''  # Para evitar error si hay columnas extra
+                    f'background-color: {color_ph(row["pH"])}; color: white;',
+                    f'background-color: {color_turbidez(row["Turbidez (NTU)"])}; color: white;',
+                    f'background-color: {color_cloro(row["Cloro Residual (mg/L)"])}; color: white;',
                 ]
 
-            # Aplica el estilo sobre todas las columnas y oculta las auxiliares
-            styled = styled_table.style.apply(style_row, axis=1)
-            try:
-                styled = styled.hide(axis="columns", subset=["pH Color", "Turbidez Color", "Cloro Color"])
-            except Exception:
-                # Para compatibilidad con pandas <1.4
-                styled = styled.hide_columns(["pH Color", "Turbidez Color", "Cloro Color"])
+            # Renombra columnas para presentación final
+            tabla.columns = ["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]
 
-            st.dataframe(styled)
+            st.dataframe(
+                tabla.style.apply(style_row, axis=1)
+            )
 
             # --- Gráfico de pH con rangos de referencia ---
             st.subheader("Histórico de pH (con rangos)")
