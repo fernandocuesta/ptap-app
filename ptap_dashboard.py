@@ -82,6 +82,8 @@ elif menu == "📊 KPIs y Análisis":
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)]
+
+        # KPIs numéricos
         ph_avg = round(ultimos_30["pH"].mean(), 2)
         tur_avg = round(ultimos_30["Turbidez (NTU)"].mean(), 2)
         clo_avg = round(ultimos_30["Cloro Residual (mg/L)"].mean(), 2)
@@ -89,6 +91,18 @@ elif menu == "📊 KPIs y Análisis":
         k1.metric("Prom. pH (30d)", ph_avg)
         k2.metric("Prom. Turbidez (30d)", tur_avg)
         k3.metric("Prom. Cloro (30d)", clo_avg)
+
+        # Gráfico histórico de pH
+        st.subheader("Histórico de pH (30 días)")
+        st.line_chart(ultimos_30.set_index("Fecha")["pH"])
+
+        # Gráfico histórico de Turbidez
+        st.subheader("Histórico de Turbidez (NTU) (30 días)")
+        st.line_chart(ultimos_30.set_index("Fecha")["Turbidez (NTU)"])
+
+        # Gráfico histórico de Cloro Residual
+        st.subheader("Histórico de Cloro Residual (mg/L) (30 días)")
+        st.line_chart(ultimos_30.set_index("Fecha")["Cloro Residual (mg/L)"])
     else:
         st.info("No hay datos registrados.")
 
