@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import gspread
+import plotly.graph_objects as go
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
@@ -77,32 +78,95 @@ if menu == "➕ Ingreso de muestra":
 
 elif menu == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
-    df = leer_datos()
+    df = leer_datos() if 'leer_datos' in globals() else st.session_state.data.copy()
     if not df.empty:
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
-        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)]
+        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
 
-        # KPIs numéricos
-        ph_avg = round(ultimos_30["pH"].mean(), 2)
-        tur_avg = round(ultimos_30["Turbidez (NTU)"].mean(), 2)
-        clo_avg = round(ultimos_30["Cloro Residual (mg/L)"].mean(), 2)
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Prom. pH (30d)", ph_avg)
-        k2.metric("Prom. Turbidez (30d)", tur_avg)
-        k3.metric("Prom. Cloro (30d)", clo_avg)
+        # --- Funciones de semáforo para KPIs individuales ---
+        def color_ph(val):
+            if 6.5 <= val <= 8.5:
+                return "#2ecc40"  # verde
+            elif 6.0 <= val < 6.5 or 8.5 < val <= 9.0:
+                return "#ffdc00"  # amarillo
+            else:
+                return "#ff4136"  # rojo
 
-        # Gráfico histórico de pH
-        st.subheader("Histórico de pH (30 días)")
-        st.line_chart(ultimos_30.set_index("Fecha")["pH"])
+        def color_turbidez(val):
+            if val < 5:
+                return "#2ecc40"
+            elif 5 <= val < 10:
+                return "#ffdc00"
+            else:
+                return "#ff4136"
 
-        # Gráfico histórico de Turbidez
-        st.subheader("Histórico de Turbidez (NTU) (30 días)")
-        st.line_chart(ultimos_30.set_index("Fecha")["Turbidez (NTU)"])
+        def color_cloro(val):
+            if 0.5 <= val <= 1.5:
+                return "#2ecc40"  # verde
+            elif (0.2 <= val < 0.5) or (1.5 < val <= 2.0):
+                return "#ffdc00"  # amarillo
+            else:
+                return "#ff4136"  # rojo
 
-        # Gráfico histórico de Cloro Residual
-        st.subheader("Histórico de Cloro Residual (mg/L) (30 días)")
-        st.line_chart(ultimos_30.set_index("Fecha")["Cloro Residual (mg/L)"])
+        # --- Tabla con valores individuales y semáforo ---
+        if not ultimos_30.empty:
+            st.subheader("Valores individuales últimos 30 días")
+            styled_table = ultimos_30[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]].copy()
+            styled_table["pH Color"] = styled_table["pH"].apply(color_ph)
+            styled_table["Turbidez Color"] = styled_table["Turbidez (NTU)"].apply(color_turbidez)
+            styled_table["Cloro Color"] = styled_table["Cloro Residual (mg/L)"].apply(color_cloro)
+
+            def style_row(row):
+                return [
+                    '',
+                    f'background-color: {row["pH Color"]}; color: white;',
+                    f'background-color: {row["Turbidez Color"]}; color: white;',
+                    f'background-color: {row["Cloro Color"]}; color: white;',
+                ]
+
+            st.dataframe(
+                styled_table[["Fecha", "pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]]
+                .style.apply(style_row, axis=1)
+            )
+
+            # --- Gráfico de pH con rangos de referencia ---
+            st.subheader("Histórico de pH (con rangos)")
+            fig_ph = go.Figure()
+            fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
+            fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+            fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
+            fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
+            fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
+            fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_ph, use_container_width=True)
+
+            # --- Gráfico de Turbidez con rango de referencia ---
+            st.subheader("Histórico de Turbidez (NTU) (con rango)")
+            fig_turb = go.Figure()
+            fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
+            fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
+            fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
+            fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
+            fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_turb, use_container_width=True)
+
+            # --- Gráfico de Cloro con rango de referencia ajustado ---
+            st.subheader("Histórico de Cloro Residual (mg/L) (con rango)")
+            fig_cloro = go.Figure()
+            fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
+            # Banda verde (óptimo)
+            fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+            # Banda amarilla (advertencia)
+            fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
+            fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
+            # Banda roja (fuera de rango)
+            fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
+            fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
+            fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_cloro, use_container_width=True)
+        else:
+            st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
     else:
         st.info("No hay datos registrados.")
 
