@@ -72,7 +72,7 @@ if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
-        st.experimental_rerun()
+        st.success("Sesión cerrada. Puedes seguir accediendo a KPIs o iniciar sesión para módulos privados.")
 
 # --------- FORMULARIO DE LOGIN EN MAIN SI SE REQUIERE ---------
 if st.session_state['show_login'] and not st.session_state['logueado']:
@@ -84,8 +84,7 @@ if st.session_state['show_login'] and not st.session_state['logueado']:
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
             st.session_state['show_login'] = False
-            st.success("Acceso concedido. Redirigiendo...")
-            st.experimental_rerun()
+            st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
         else:
             st.error("Usuario o contraseña incorrectos.")
     st.stop()
@@ -95,7 +94,7 @@ secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar
 
 if menu in secciones_privadas and not st.session_state['logueado']:
     st.session_state['show_login'] = True
-    st.experimental_rerun()
+    st.stop()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
