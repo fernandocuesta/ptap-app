@@ -65,10 +65,6 @@ st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layou
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
 
-# DEBUG (puedes comentar esto luego)
-st.write("DEBUG - Menú seleccionado:", menu)
-st.write("DEBUG - Logueado:", st.session_state.get("logueado", False))
-
 # Botón de logout SI está logueado
 if st.session_state.get("logueado", False):
     if st.sidebar.button("Cerrar sesión"):
