@@ -73,27 +73,28 @@ if st.session_state['logueado']:
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
         st.success("Sesión cerrada. Puedes seguir accediendo a KPIs o iniciar sesión para módulos privados.")
+        st.experimental_rerun()
 
 # --------- FORMULARIO DE LOGIN EN MAIN SI SE REQUIERE ---------
 if st.session_state['show_login'] and not st.session_state['logueado']:
     st.title("Acceso restringido")
-    usuario = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    col_login, col_cancel = st.columns([1, 1])
-    with col_login:
-        login_btn = st.button("Ingresar")
-    with col_cancel:
-        volver_btn = st.button("Volver a KPIs y Análisis")
-    if login_btn:
-        if usuario == USUARIO and password == PASSWORD:
-            st.session_state['logueado'] = True
+    with st.form("login_form", clear_on_submit=False):
+        usuario = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        col_login, col_cancel = st.columns([1, 1])
+        login_btn = col_login.form_submit_button("Ingresar")
+        volver_btn = col_cancel.form_submit_button("Volver a KPIs y Análisis")
+        if login_btn:
+            if usuario == USUARIO and password == PASSWORD:
+                st.session_state['logueado'] = True
+                st.session_state['show_login'] = False
+                st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
+                st.experimental_rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos.")
+        if volver_btn:
             st.session_state['show_login'] = False
-            st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-    if volver_btn:
-        st.session_state['show_login'] = False
-        # No salimos, simplemente quitamos el login y vuelves al menú público.
+            st.experimental_rerun()
     st.stop()
 
 # --------- CONTROL DE ACCESO A SECCIONES PRIVADAS ---------
@@ -101,6 +102,7 @@ secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar
 
 if menu in secciones_privadas and not st.session_state['logueado']:
     st.session_state['show_login'] = True
+    st.experimental_rerun()
     st.stop()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
