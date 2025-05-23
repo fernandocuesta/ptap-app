@@ -69,34 +69,31 @@ if not st.session_state['logueado']:
         st.session_state['show_login'] = True
         st.experimental_rerun()
 
-# --- Mostrar login en main si la bandera está activa y no logueado ---
-def login():
-    st.title("Acceso restringido")
-    usuario = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Ingresar"):
-        if usuario == USUARIO and password == PASSWORD:
-            st.session_state['logueado'] = True
-            st.session_state['show_login'] = False
-            st.success("Acceso concedido. Menú completo habilitado.")
-            st.stop()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-
-if st.session_state['show_login'] and not st.session_state['logueado']:
-    login()
-    st.stop()
-
 # Botón de logout solo si está logueado
 if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
-        st.success("Sesión cerrada. Solo KPIs disponible.")
-        st.stop()
+        st.experimental_rerun()
 
 # Secciones privadas
 secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
+
+# Mostrar login si corresponde
+if st.session_state['show_login'] and not st.session_state['logueado']:
+    st.title("Acceso restringido")
+    usuario = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    login_btn = st.button("Ingresar")
+    if login_btn:
+        if usuario == USUARIO and password == PASSWORD:
+            st.session_state['logueado'] = True
+            st.session_state['show_login'] = False
+            st.success("Acceso concedido. Menú completo habilitado.")
+            st.experimental_rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+    st.stop()
 
 if menu in secciones_privadas:
     if not st.session_state['logueado']:
