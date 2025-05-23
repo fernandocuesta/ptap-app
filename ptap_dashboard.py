@@ -6,15 +6,14 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
-# --- Configura credenciales aquí ---
 USUARIO = "admin"
 PASSWORD = "1234"
 
-# --- Google Sheets Authentication ---
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
+
 @st.cache_resource(show_spinner=False)
 def get_worksheet():
     creds = Credentials.from_service_account_info(
@@ -55,13 +54,15 @@ def show_login():
     with st.form("login_form", clear_on_submit=False):
         usuario = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
-        submit = st.form_submit_button("Ingresar")
-        volver = st.form_submit_button("Volver a KPIs y Análisis")
+        col1, col2 = st.columns([1,2])
+        submit = col1.form_submit_button("Ingresar")
+        volver = col2.form_submit_button("Volver a KPIs y Análisis")
     if volver:
         st.session_state['show_login'] = False
         st.session_state['logueado'] = False
         st.session_state['menu'] = "📊 KPIs y Análisis"
-        return  # No rerun, solo vuelve a KPIs
+        st.experimental_rerun()
+        st.stop()
     if submit:
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
@@ -69,6 +70,7 @@ def show_login():
             st.session_state['menu'] = "➕ Ingreso de muestra"
             st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
             st.experimental_rerun()
+            st.stop()
         else:
             st.error("Usuario o contraseña incorrectos.")
             st.session_state['logueado'] = False
@@ -96,6 +98,7 @@ else:
             st.session_state['show_login'] = True
             st.session_state['menu'] = "login"
             st.experimental_rerun()
+            st.stop()
 
 # Botón de logout solo si logueado
 if st.session_state.get("logueado", False):
@@ -105,6 +108,7 @@ if st.session_state.get("logueado", False):
         st.session_state['menu'] = "📊 KPIs y Análisis"
         st.success("Sesión cerrada. Solo puedes ver KPIs.")
         st.experimental_rerun()
+        st.stop()
 
 # --- GESTIÓN DE NAVEGACIÓN Y LOGIN ---
 if st.session_state.get('show_login', False):
