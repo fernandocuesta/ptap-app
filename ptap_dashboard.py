@@ -54,27 +54,34 @@ def login():
     if st.button("Ingresar"):
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
-            st.success("Acceso concedido. Puedes navegar ahora.")
-            st.stop()  # Detener la app para evitar errores de ciclo
+            st.success("Acceso concedido. Menú completo habilitado.")
+            st.stop()
         else:
             st.error("Usuario o contraseña incorrectos.")
 
-# --------- MENÚ Y CONTROL DE ACCESO ROBUSTO ----------
+# --------- MENÚ DINÁMICO Y CONTROL DE ACCESO ----------
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
-menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
 
-# Botón de logout SI está logueado
+# Menú dinámico según login
+if st.session_state.get("logueado", False):
+    menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
+else:
+    menu_options = ["📊 KPIs y Análisis"]
+
+menu = st.sidebar.radio("Ir a:", menu_options)
+
+# Botón de logout solo si está logueado
 if st.session_state.get("logueado", False):
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
-        st.success("Sesión cerrada. Puedes seguir accediendo a KPIs o iniciar sesión para módulos privados.")
-        st.stop()  # Detener para evitar errores de rerun
+        st.success("Sesión cerrada. Solo KPIs disponible.")
+        st.stop()
 
-# Las secciones que requieren login
+# Secciones privadas
 secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
 
-# --- Control de acceso robusto (solo pide login si hace falta) ---
+# Control de acceso: si no está logueado y entra a privada, pide login
 if menu in secciones_privadas:
     if 'logueado' not in st.session_state or not st.session_state['logueado']:
         login()
@@ -116,7 +123,7 @@ if menu == "➕ Ingreso de muestra":
         guardar_muestra(muestra)
         st.success("✅ Registro guardado en Google Sheets correctamente.")
 
-# --------- SECCIÓN KPIs y ANÁLISIS (PÚBLICA) ----------
+# --------- SECCIÓN KPIs y ANÁLISIS (SIEMPRE PÚBLICA) ----------
 elif menu == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
     df = leer_datos()
