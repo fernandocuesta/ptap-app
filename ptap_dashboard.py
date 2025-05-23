@@ -53,17 +53,26 @@ def login():
             st.error("Usuario o contraseña incorrectos.")
     st.stop()
 
-# --------- MENÚ Y CONTROL DE ACCESO ----------
+# --------- MENÚ Y CONTROL DE ACCESO ROBUSTO ----------
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
 
+# Botón de logout SI está logueado
+if st.session_state.get("logueado", False):
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state['logueado'] = False
+        st.success("Sesión cerrada. Puedes seguir accediendo a KPIs o iniciar sesión para módulos privados.")
+        st.experimental_rerun()
+
 # Las secciones que requieren login
 secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
 
+# --- Control de acceso robusto (solo pide login si hace falta) ---
 if menu in secciones_privadas:
     if 'logueado' not in st.session_state or not st.session_state['logueado']:
         login()
+        st.stop()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
@@ -104,7 +113,7 @@ if menu == "➕ Ingreso de muestra":
 # --------- SECCIÓN KPIs y ANÁLISIS (PÚBLICA) ----------
 elif menu == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
-    df = leer_datos() if 'leer_datos' in globals() else st.session_state.data.copy()
+    df = leer_datos()
     if not df.empty:
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
