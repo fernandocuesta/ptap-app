@@ -79,7 +79,11 @@ if st.session_state['show_login'] and not st.session_state['logueado']:
     st.title("Acceso restringido")
     usuario = st.text_input("Usuario")
     password = st.text_input("Contraseña", type="password")
-    login_btn = st.button("Ingresar")
+    col_login, col_cancel = st.columns([1, 1])
+    with col_login:
+        login_btn = st.button("Ingresar")
+    with col_cancel:
+        volver_btn = st.button("Volver a KPIs y Análisis")
     if login_btn:
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
@@ -87,6 +91,9 @@ if st.session_state['show_login'] and not st.session_state['logueado']:
             st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
         else:
             st.error("Usuario o contraseña incorrectos.")
+    if volver_btn:
+        st.session_state['show_login'] = False
+        # No salimos, simplemente quitamos el login y vuelves al menú público.
     st.stop()
 
 # --------- CONTROL DE ACCESO A SECCIONES PRIVADAS ---------
