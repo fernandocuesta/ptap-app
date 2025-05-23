@@ -15,8 +15,6 @@ if 'logueado' not in st.session_state:
     st.session_state['logueado'] = False
 if 'show_login' not in st.session_state:
     st.session_state['show_login'] = False
-if 'do_rerun' not in st.session_state:
-    st.session_state['do_rerun'] = False
 
 # --- Google Sheets Authentication ---
 scope = [
@@ -72,7 +70,6 @@ if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
-        st.session_state['do_rerun'] = True
         st.success("Sesión cerrada. Solo puedes ver KPIs.")
         st.experimental_rerun()
 else:
@@ -95,17 +92,13 @@ if st.session_state['show_login'] and not st.session_state['logueado']:
             if usuario == USUARIO and password == PASSWORD:
                 st.session_state['logueado'] = True
                 st.session_state['show_login'] = False
-                st.session_state['do_rerun'] = True
                 st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
+                st.experimental_rerun()
             else:
                 st.error("Usuario o contraseña incorrectos.")
         if volver_btn:
             st.session_state['show_login'] = False
-            st.session_state['do_rerun'] = True
-    # FUERA del form, controla el rerun SOLO una vez:
-    if st.session_state.get('do_rerun', False):
-        st.session_state['do_rerun'] = False
-        st.experimental_rerun()
+            st.experimental_rerun()
     st.stop()
 
 # --------- SECCIÓN KPIs y ANÁLISIS (SIEMPRE PÚBLICA) ----------
