@@ -92,7 +92,7 @@ def show_login():
     with st.form("login_form", clear_on_submit=False):
         usuario = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
-        col1, col2 = st.columns([1,2])
+        col1, col2 = st.columns([1,1])
         login_btn = col1.form_submit_button("Ingresar")
         volver_btn = col2.form_submit_button("Volver a KPIs y Análisis")
     if volver_btn:
