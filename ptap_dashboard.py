@@ -55,10 +55,9 @@ def login():
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
             st.success("Acceso concedido. Puedes navegar ahora.")
-            st.stop()  # Detiene TODO hasta el siguiente ciclo (lo más seguro)
+            st.stop()  # Detener la app para evitar errores de ciclo
         else:
             st.error("Usuario o contraseña incorrectos.")
-
 
 # --------- MENÚ Y CONTROL DE ACCESO ROBUSTO ----------
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
@@ -70,7 +69,7 @@ if st.session_state.get("logueado", False):
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.success("Sesión cerrada. Puedes seguir accediendo a KPIs o iniciar sesión para módulos privados.")
-        st.experimental_rerun()
+        st.stop()  # Detener para evitar errores de rerun
 
 # Las secciones que requieren login
 secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
@@ -78,9 +77,8 @@ secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar
 # --- Control de acceso robusto (solo pide login si hace falta) ---
 if menu in secciones_privadas:
     if 'logueado' not in st.session_state or not st.session_state['logueado']:
-        login()    # Si hace login, internamente hará st.stop()
-        st.stop()  # Este detiene la ejecución si no está logueado aún
-
+        login()
+        st.stop()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
