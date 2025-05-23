@@ -46,22 +46,11 @@ locaciones = [
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
 ]
 
-# --------- LOGIN FUNCTION ----------
-def login():
-    st.title("Acceso restringido")
-    usuario = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Ingresar"):
-        if usuario == USUARIO and password == PASSWORD:
-            st.session_state['logueado'] = True
-            st.success("Acceso concedido. Menú completo habilitado.")
-            st.stop()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-
 # --------- INICIALIZACIÓN DEL ESTADO ---------
 if 'logueado' not in st.session_state:
     st.session_state['logueado'] = False
+if 'show_login' not in st.session_state:
+    st.session_state['show_login'] = False
 
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
@@ -77,13 +66,32 @@ menu = st.sidebar.radio("Ir a:", menu_options)
 # --- Botón de login visible cuando NO estás logueado ---
 if not st.session_state['logueado']:
     if st.sidebar.button("Iniciar sesión"):
-        login()
-        st.stop()
+        st.session_state['show_login'] = True
+        st.experimental_rerun()
+
+# --- Mostrar login en main si la bandera está activa y no logueado ---
+def login():
+    st.title("Acceso restringido")
+    usuario = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Ingresar"):
+        if usuario == USUARIO and password == PASSWORD:
+            st.session_state['logueado'] = True
+            st.session_state['show_login'] = False
+            st.success("Acceso concedido. Menú completo habilitado.")
+            st.stop()
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+
+if st.session_state['show_login'] and not st.session_state['logueado']:
+    login()
+    st.stop()
 
 # Botón de logout solo si está logueado
 if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
+        st.session_state['show_login'] = False
         st.success("Sesión cerrada. Solo KPIs disponible.")
         st.stop()
 
@@ -92,8 +100,8 @@ secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar
 
 if menu in secciones_privadas:
     if not st.session_state['logueado']:
-        login()
-        st.stop()
+        st.session_state['show_login'] = True
+        st.experimental_rerun()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
