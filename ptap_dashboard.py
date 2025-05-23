@@ -15,15 +15,21 @@ scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"], scopes=scope
-)
-gc = gspread.authorize(creds)
-SHEET_URL = "https://docs.google.com/spreadsheets/d/19AZGamcT9AIkV6aR4Xs7CCObgBo8xKFlv4eXfrAUJuU/edit?usp=sharing"
-sh = gc.open_by_url(SHEET_URL)
-worksheet = sh.sheet1
+try:
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"], scopes=scope
+    )
+    gc = gspread.authorize(creds)
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19AZGamcT9AIkV6aR4Xs7CCObgBo8xKFlv4eXfrAUJuU/edit?usp=sharing"
+    sh = gc.open_by_url(SHEET_URL)
+    worksheet = sh.sheet1
+except Exception as e:
+    st.error(f"Error conectando a Google Sheets: {e}")
+    worksheet = None  # Así la app sigue para ver el login
 
 def leer_datos():
+    if worksheet is None:
+        return pd.DataFrame()
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
     if not df.empty and "Fecha" in df.columns:
@@ -31,7 +37,8 @@ def leer_datos():
     return df
 
 def guardar_muestra(muestra):
-    worksheet.append_row(muestra)
+    if worksheet is not None:
+        worksheet.append_row(muestra)
 
 tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
 locaciones = [
@@ -57,6 +64,10 @@ def login():
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 menu = st.sidebar.radio("Ir a:", ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"])
+
+# DEBUG (puedes comentar esto luego)
+st.write("DEBUG - Menú seleccionado:", menu)
+st.write("DEBUG - Logueado:", st.session_state.get("logueado", False))
 
 # Botón de logout SI está logueado
 if st.session_state.get("logueado", False):
