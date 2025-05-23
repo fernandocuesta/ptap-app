@@ -49,35 +49,7 @@ locaciones = [
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
 ]
 
-def show_login():
-    st.title("Acceso restringido")
-    with st.form("login_form", clear_on_submit=False):
-        usuario = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        col1, col2 = st.columns([1,2])
-        submit = col1.form_submit_button("Ingresar")
-        volver = col2.form_submit_button("Volver a KPIs y Análisis")
-    if volver:
-        st.session_state['show_login'] = False
-        st.session_state['logueado'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
-        st.experimental_rerun()
-        st.stop()
-    if submit:
-        if usuario == USUARIO and password == PASSWORD:
-            st.session_state['logueado'] = True
-            st.session_state['show_login'] = False
-            st.session_state['menu'] = "➕ Ingreso de muestra"
-            st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
-            st.experimental_rerun()
-            st.stop()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-            st.session_state['logueado'] = False
-            st.session_state['show_login'] = True
-
-# --- SETUP DE MENÚ Y SESIÓN ---
-st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
+# Estado inicial de sesión y navegación
 if "logueado" not in st.session_state:
     st.session_state['logueado'] = False
 if "show_login" not in st.session_state:
@@ -85,40 +57,63 @@ if "show_login" not in st.session_state:
 if "menu" not in st.session_state:
     st.session_state['menu'] = "📊 KPIs y Análisis"
 
-# --- Mostrar navegación lateral ---
+# Sidebar de navegación
+st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 menu_options = ["📊 KPIs y Análisis"]
-if st.session_state.get('logueado', False):
+if st.session_state['logueado']:
     menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
-    selected = st.sidebar.radio("Ir a:", menu_options, index=menu_options.index(st.session_state["menu"]))
+
+# Control de menú desde la sesión, así no hay doble click nunca
+if st.session_state['show_login']:
+    st.session_state['menu'] = "login"
 else:
-    selected = st.sidebar.radio("Ir a:", menu_options, index=0)
-    if not st.session_state.get('show_login', False):
+    selected = st.sidebar.radio("Ir a:", menu_options, index=menu_options.index(st.session_state['menu']))
+    st.session_state['menu'] = selected
+
+if not st.session_state['logueado']:
+    if not st.session_state['show_login']:
         if st.sidebar.button("Iniciar sesión"):
             st.session_state['show_login'] = True
-            st.session_state['menu'] = "login"
-            st.experimental_rerun()
-            st.stop()
-
-# Botón de logout solo si logueado
-if st.session_state.get("logueado", False):
+    else:
+        # No mostrar KPIs, solo login o volver
+        pass
+else:
+    # Solo mostrar logout si está logueado
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
         st.session_state['menu'] = "📊 KPIs y Análisis"
         st.success("Sesión cerrada. Solo puedes ver KPIs.")
-        st.experimental_rerun()
-        st.stop()
 
-# --- GESTIÓN DE NAVEGACIÓN Y LOGIN ---
-if st.session_state.get('show_login', False):
+# Vista de Login
+def show_login():
+    st.title("Acceso restringido")
+    with st.form("login_form", clear_on_submit=False):
+        usuario = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        col1, col2 = st.columns([1,2])
+        login_btn = col1.form_submit_button("Ingresar")
+        volver_btn = col2.form_submit_button("Volver a KPIs y Análisis")
+    if volver_btn:
+        st.session_state['show_login'] = False
+        st.session_state['menu'] = "📊 KPIs y Análisis"
+    elif login_btn:
+        if usuario == USUARIO and password == PASSWORD:
+            st.session_state['logueado'] = True
+            st.session_state['show_login'] = False
+            st.session_state['menu'] = "➕ Ingreso de muestra"
+            st.success("Acceso concedido. Ya puedes usar todas las secciones.")
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+            st.session_state['logueado'] = False
+
+# Lógica de qué mostrar (navegación)
+if st.session_state['menu'] == "login":
     show_login()
     st.stop()
 
-st.session_state['menu'] = selected
-
-# --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
-if selected == "➕ Ingreso de muestra":
+if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['logueado']:
     st.title("➕ Registro de nueva muestra")
     col1, col2 = st.columns(2)
     tz = pytz.timezone("America/Lima")
@@ -134,7 +129,6 @@ if selected == "➕ Ingreso de muestra":
         cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
@@ -153,15 +147,13 @@ if selected == "➕ Ingreso de muestra":
         guardar_muestra(muestra)
         st.success("✅ Registro guardado en Google Sheets correctamente.")
 
-# --------- SECCIÓN KPIs y ANÁLISIS (PÚBLICA) ----------
-elif selected == "📊 KPIs y Análisis":
+elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 KPIs y Análisis de datos por locación")
     df = leer_datos()
     if not df.empty:
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
-
         if not ultimos_30.empty:
             st.subheader("pH")
             fig_ph = go.Figure()
@@ -172,7 +164,6 @@ elif selected == "📊 KPIs y Análisis":
             fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
             fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
             st.plotly_chart(fig_ph, use_container_width=True)
-
             st.subheader("Turbidez (NTU)")
             fig_turb = go.Figure()
             fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
@@ -181,7 +172,6 @@ elif selected == "📊 KPIs y Análisis":
             fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
             fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
             st.plotly_chart(fig_turb, use_container_width=True)
-
             st.subheader("Cloro Residual (mg/L)")
             fig_cloro = go.Figure()
             fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
@@ -197,8 +187,7 @@ elif selected == "📊 KPIs y Análisis":
     else:
         st.info("No hay datos registrados.")
 
-# --------- SECCIÓN HISTORIAL (privada) ----------
-elif selected == "📄 Historial":
+elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado']:
     st.title("📄 Historial de muestras registradas")
     df = leer_datos()
     if not df.empty:
@@ -222,8 +211,7 @@ elif selected == "📄 Historial":
     else:
         st.warning("No hay registros para mostrar.")
 
-# --------- SECCIÓN EXPORTAR (privada) ----------
-elif selected == "📥 Exportar":
+elif st.session_state['menu'] == "📥 Exportar" and st.session_state['logueado']:
     st.title("📥 Exportar registros en Excel")
     df = leer_datos()
     if not df.empty:
