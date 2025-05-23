@@ -55,7 +55,19 @@ if 'show_login' not in st.session_state:
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 
-# --------- MENÚ DINÁMICO Y CONTROL DE ACCESO ---------
+# --------- SIDEBAR DE LOGIN/LOGOUT, ÚNICAMENTE MANEJA ESTADO Y RERUN ---------
+if not st.session_state['logueado']:
+    if st.sidebar.button("Iniciar sesión"):
+        st.session_state['show_login'] = True
+        st.experimental_rerun()
+
+if st.session_state['logueado']:
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state['logueado'] = False
+        st.session_state['show_login'] = False
+        st.experimental_rerun()
+
+# --------- MENÚ DINÁMICO (SOLO ACCESO PÚBLICO O MENÚ COMPLETO SI ESTÁS LOGUEADO) ---------
 if st.session_state['logueado']:
     menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
 else:
@@ -63,42 +75,26 @@ else:
 
 menu = st.sidebar.radio("Ir a:", menu_options)
 
-# --- Botón de login visible cuando NO estás logueado ---
-if not st.session_state['logueado']:
-    if st.sidebar.button("Iniciar sesión"):
-        st.session_state['show_login'] = True
-        st.experimental_rerun()
-
-# Botón de logout solo si está logueado
-if st.session_state['logueado']:
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state['logueado'] = False
-        st.session_state['show_login'] = False
-        st.experimental_rerun()
-
-# Secciones privadas
-secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
-
-# Mostrar login si corresponde
+# --------- FORMULARIO DE LOGIN EN MAIN SI SE REQUIERE ---------
 if st.session_state['show_login'] and not st.session_state['logueado']:
     st.title("Acceso restringido")
     usuario = st.text_input("Usuario")
     password = st.text_input("Contraseña", type="password")
-    login_btn = st.button("Ingresar")
-    if login_btn:
+    if st.button("Ingresar"):
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
             st.session_state['show_login'] = False
-            st.success("Acceso concedido. Menú completo habilitado.")
-            st.experimental_rerun()
+            st.experimental_rerun()  # No hay más widgets ni st.stop() después
         else:
             st.error("Usuario o contraseña incorrectos.")
     st.stop()
 
-if menu in secciones_privadas:
-    if not st.session_state['logueado']:
-        st.session_state['show_login'] = True
-        st.experimental_rerun()
+# --------- CONTROL DE ACCESO A SECCIONES PRIVADAS ---------
+secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
+
+if menu in secciones_privadas and not st.session_state['logueado']:
+    st.session_state['show_login'] = True
+    st.experimental_rerun()
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
 if menu == "➕ Ingreso de muestra":
