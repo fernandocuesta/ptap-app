@@ -6,26 +6,29 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
-# --- Configura credenciales aquí ---
 USUARIO = "admin"
 PASSWORD = "1234"
 
-# --- Google Sheets Authentication ---
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-try:
+
+@st.cache_resource(show_spinner=False)
+def get_worksheet():
     creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], scopes=scope
     )
     gc = gspread.authorize(creds)
     SHEET_URL = "https://docs.google.com/spreadsheets/d/19AZGamcT9AIkV6aR4Xs7CCObgBo8xKFlv4eXfrAUJuU/edit?usp=sharing"
     sh = gc.open_by_url(SHEET_URL)
-    worksheet = sh.sheet1
+    return sh.sheet1
+
+worksheet = None
+try:
+    worksheet = get_worksheet()
 except Exception as e:
     st.error(f"Error conectando a Google Sheets: {e}")
-    worksheet = None  # Así la app sigue para ver el login
 
 def leer_datos():
     if worksheet is None:
@@ -40,134 +43,77 @@ def guardar_muestra(muestra):
     if worksheet is not None:
         worksheet.append_row(muestra)
 
-tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
+tecnicos = ["José Luis Sanchez", "Wacner Montalvan"]
 locaciones = [
     "L95-AC-SUR-COM2", "L95-AC-SUR-PTAP", "L95-AC-SUR-GC",
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
 ]
 
-# --------- LOGIN FUNCTION MEJORADO ---------
+# Estado inicial de sesión y navegación
+if "logueado" not in st.session_state:
+    st.session_state['logueado'] = False
+if "show_login" not in st.session_state:
+    st.session_state['show_login'] = False
+if "menu" not in st.session_state:
+    st.session_state['menu'] = "📊 KPIs y Análisis"
+
+# Sidebar de navegación
+st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
+st.sidebar.header("📂 Menú")
+menu_options = ["📊 KPIs y Análisis"]
+if st.session_state['logueado']:
+    menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
+
+# Control de menú desde la sesión, así no hay doble click nunca
+if st.session_state['show_login']:
+    st.session_state['menu'] = "login"
+else:
+    selected = st.sidebar.radio("Ir a:", menu_options, index=menu_options.index(st.session_state['menu']))
+    st.session_state['menu'] = selected
+
+if not st.session_state['logueado']:
+    if not st.session_state['show_login']:
+        if st.sidebar.button("Iniciar sesión"):
+            st.session_state['show_login'] = True
+    else:
+        # No mostrar KPIs, solo login o volver
+        pass
+else:
+    # Solo mostrar logout si está logueado
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state['logueado'] = False
+        st.session_state['show_login'] = False
+        st.session_state['menu'] = "📊 KPIs y Análisis"
+        st.success("Sesión cerrada. Solo puedes ver KPIs.")
+
+# Vista de Login
 def show_login():
     st.title("Acceso restringido")
-    # Para mantener los campos después de redirigir
-    usuario = st.session_state.get('usuario_tmp', "")
-    password = st.session_state.get('password_tmp', "")
-    login_submitted = False
-    volver_submitted = False
     with st.form("login_form", clear_on_submit=False):
-        usuario = st.text_input("Usuario", value=usuario, key="usuario_tmp")
-        password = st.text_input("Contraseña", type="password", value=password, key="password_tmp")
-        # Dos columnas para centrar botones y que estén juntos
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col2:
-            login_submitted = st.form_submit_button("Ingresar", use_container_width=True)
-        with col3:
-            volver_submitted = st.form_submit_button("Volver a KPIs y Análisis", use_container_width=True)
-
-    if login_submitted:
+        usuario = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        col1, col2 = st.columns([1,1])
+        login_btn = col1.form_submit_button("Ingresar")
+        volver_btn = col2.form_submit_button("Volver a KPIs y Análisis")
+    if volver_btn:
+        st.session_state['show_login'] = False
+        st.session_state['menu'] = "📊 KPIs y Análisis"
+    elif login_btn:
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
             st.session_state['show_login'] = False
             st.session_state['menu'] = "➕ Ingreso de muestra"
-            st.success("Acceso concedido. Haz clic en KPIs para navegar o elige otra sección.")
+            st.success("Acceso concedido. Ya puedes usar todas las secciones.")
         else:
             st.error("Usuario o contraseña incorrectos.")
             st.session_state['logueado'] = False
-    elif volver_submitted:
-        st.session_state['show_login'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
-        st.experimental_rerun()
 
-# --------- CONTROL Y MENU ---------
-st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
-
-if 'logueado' not in st.session_state:
-    st.session_state['logueado'] = False
-if 'show_login' not in st.session_state:
-    st.session_state['show_login'] = False
-if 'menu' not in st.session_state:
-    st.session_state['menu'] = "📊 KPIs y Análisis"
-
-# SIDEBAR LOGICA
-st.sidebar.header("📁 Menú")
-# Si está logueado, muestra todo el menú
-if st.session_state['logueado']:
-    menu = st.sidebar.radio(
-        "Ir a:", 
-        ["📊 KPIs y Análisis", "➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"], 
-        index=["📊 KPIs y Análisis", "➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"].index(st.session_state['menu'])
-    )
-    st.session_state['menu'] = menu
-    # Botón de logout
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state['logueado'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
-        st.session_state['show_login'] = False
-        st.success("Sesión cerrada. Solo puedes ver KPIs.")
-        st.experimental_rerun()
-else:
-    # Solo KPIs y opción de login
-    menu = st.session_state['menu']
-    st.sidebar.radio("Ir a:", ["📊 KPIs y Análisis"], index=0)
-    if st.sidebar.button("Iniciar sesión"):
-        st.session_state['show_login'] = True
-
-# ------ LOGICA DE MENU Y LOGIN ------
-secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
-
-if st.session_state.get('show_login', False):
+# Lógica de qué mostrar (navegación)
+if st.session_state['menu'] == "login":
     show_login()
     st.stop()
 
-# --------- SECCIÓN KPIs y ANÁLISIS (PÚBLICA) ----------
-if st.session_state['menu'] == "📊 KPIs y Análisis":
-    st.title("📊 KPIs y Análisis de datos por locación")
-    df = leer_datos()
-    if not df.empty:
-        locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
-        df_filtrado = df[df["Locación"] == locacion_seleccionada]
-        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
-
-        if not ultimos_30.empty:
-            st.subheader("pH")
-            fig_ph = go.Figure()
-            fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
-            fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
-            fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_ph, use_container_width=True)
-
-            st.subheader("Turbidez (NTU)")
-            fig_turb = go.Figure()
-            fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
-            fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
-            fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
-            fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_turb, use_container_width=True)
-
-            st.subheader("Cloro Residual (mg/L)")
-            fig_cloro = go.Figure()
-            fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
-            fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_cloro, use_container_width=True)
-        else:
-            st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
-    else:
-        st.info("No hay datos registrados.")
-
-# --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
-elif st.session_state['menu'] == "➕ Ingreso de muestra":
-    if not st.session_state.get('logueado', False):
-        st.session_state['show_login'] = True
-        st.experimental_rerun()
+if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['logueado']:
     st.title("➕ Registro de nueva muestra")
     col1, col2 = st.columns(2)
     tz = pytz.timezone("America/Lima")
@@ -183,7 +129,6 @@ elif st.session_state['menu'] == "➕ Ingreso de muestra":
         cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
@@ -202,11 +147,47 @@ elif st.session_state['menu'] == "➕ Ingreso de muestra":
         guardar_muestra(muestra)
         st.success("✅ Registro guardado en Google Sheets correctamente.")
 
-# --------- SECCIÓN HISTORIAL (privada) ----------
-elif st.session_state['menu'] == "📄 Historial":
-    if not st.session_state.get('logueado', False):
-        st.session_state['show_login'] = True
-        st.experimental_rerun()
+elif st.session_state['menu'] == "📊 KPIs y Análisis":
+    st.title("📊 KPIs y Análisis de datos por locación")
+    df = leer_datos()
+    if not df.empty:
+        locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
+        df_filtrado = df[df["Locación"] == locacion_seleccionada]
+        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
+        if not ultimos_30.empty:
+            st.subheader("pH")
+            fig_ph = go.Figure()
+            fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
+            fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+            fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
+            fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
+            fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
+            fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_ph, use_container_width=True)
+            st.subheader("Turbidez (NTU)")
+            fig_turb = go.Figure()
+            fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
+            fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
+            fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
+            fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
+            fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_turb, use_container_width=True)
+            st.subheader("Cloro Residual (mg/L)")
+            fig_cloro = go.Figure()
+            fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
+            fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+            fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
+            fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
+            fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
+            fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
+            fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+            st.plotly_chart(fig_cloro, use_container_width=True)
+        else:
+            st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
+    else:
+        st.info("No hay datos registrados.")
+
+elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado']:
     st.title("📄 Historial de muestras registradas")
     df = leer_datos()
     if not df.empty:
@@ -230,11 +211,7 @@ elif st.session_state['menu'] == "📄 Historial":
     else:
         st.warning("No hay registros para mostrar.")
 
-# --------- SECCIÓN EXPORTAR (privada) ----------
-elif st.session_state['menu'] == "📥 Exportar":
-    if not st.session_state.get('logueado', False):
-        st.session_state['show_login'] = True
-        st.experimental_rerun()
+elif st.session_state['menu'] == "📥 Exportar" and st.session_state['logueado']:
     st.title("📥 Exportar registros en Excel")
     df = leer_datos()
     if not df.empty:
