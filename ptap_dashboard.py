@@ -6,7 +6,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
-# --- Configura credenciales aquí ---
+# --- Credenciales ---
 USUARIO = "admin"
 PASSWORD = "1234"
 
@@ -25,7 +25,7 @@ try:
     worksheet = sh.sheet1
 except Exception as e:
     st.error(f"Error conectando a Google Sheets: {e}")
-    worksheet = None  # Así la app sigue para ver el login
+    worksheet = None
 
 def leer_datos():
     if worksheet is None:
@@ -59,12 +59,15 @@ def login():
         else:
             st.error("Usuario o contraseña incorrectos.")
 
-# --------- MENÚ DINÁMICO Y CONTROL DE ACCESO ----------
+# --------- INICIALIZACIÓN DEL ESTADO ---------
+if 'logueado' not in st.session_state:
+    st.session_state['logueado'] = False
+
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
 st.sidebar.header("📂 Navegación")
 
-# Menú dinámico según login
-if st.session_state.get("logueado", False):
+# --------- MENÚ DINÁMICO Y CONTROL DE ACCESO ---------
+if st.session_state['logueado']:
     menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
 else:
     menu_options = ["📊 KPIs y Análisis"]
@@ -72,7 +75,7 @@ else:
 menu = st.sidebar.radio("Ir a:", menu_options)
 
 # Botón de logout solo si está logueado
-if st.session_state.get("logueado", False):
+if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.success("Sesión cerrada. Solo KPIs disponible.")
@@ -81,9 +84,8 @@ if st.session_state.get("logueado", False):
 # Secciones privadas
 secciones_privadas = ["➕ Ingreso de muestra", "📄 Historial", "📥 Exportar"]
 
-# Control de acceso: si no está logueado y entra a privada, pide login
 if menu in secciones_privadas:
-    if 'logueado' not in st.session_state or not st.session_state['logueado']:
+    if not st.session_state['logueado']:
         login()
         st.stop()
 
