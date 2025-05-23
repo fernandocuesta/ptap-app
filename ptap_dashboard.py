@@ -58,7 +58,8 @@ def login():
             st.experimental_rerun()
         else:
             st.error("Usuario o contraseña incorrectos.")
-    st.stop()
+    # NO uses st.stop() aquí
+    return
 
 # --------- MENÚ Y CONTROL DE ACCESO ROBUSTO ----------
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
