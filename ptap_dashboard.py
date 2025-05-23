@@ -74,6 +74,12 @@ else:
 
 menu = st.sidebar.radio("Ir a:", menu_options)
 
+# --- Botón de login visible cuando NO estás logueado ---
+if not st.session_state['logueado']:
+    if st.sidebar.button("Iniciar sesión"):
+        login()
+        st.stop()
+
 # Botón de logout solo si está logueado
 if st.session_state['logueado']:
     if st.sidebar.button("Cerrar sesión"):
