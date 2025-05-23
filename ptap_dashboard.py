@@ -57,12 +57,11 @@ def show_login():
         password = st.text_input("Contraseña", type="password")
         submit = st.form_submit_button("Ingresar")
         volver = st.form_submit_button("Volver a KPIs y Análisis")
-    # Volver a KPIs siempre visible
     if volver:
         st.session_state['show_login'] = False
         st.session_state['logueado'] = False
         st.session_state['menu'] = "📊 KPIs y Análisis"
-        st.experimental_rerun()
+        return  # No rerun, solo vuelve a KPIs
     if submit:
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
@@ -92,7 +91,6 @@ if st.session_state.get('logueado', False):
     selected = st.sidebar.radio("Ir a:", menu_options, index=menu_options.index(st.session_state["menu"]))
 else:
     selected = st.sidebar.radio("Ir a:", menu_options, index=0)
-    # Solo muestra botón de login si no está logueado ni ya mostrando el form login
     if not st.session_state.get('show_login', False):
         if st.sidebar.button("Iniciar sesión"):
             st.session_state['show_login'] = True
@@ -113,7 +111,6 @@ if st.session_state.get('show_login', False):
     show_login()
     st.stop()
 
-# Mantén el menú en la sesión
 st.session_state['menu'] = selected
 
 # --------- SECCIÓN INGRESO DE MUESTRA (privada) ----------
@@ -162,7 +159,6 @@ elif selected == "📊 KPIs y Análisis":
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
 
         if not ultimos_30.empty:
-            # --- Gráficos ---
             st.subheader("pH")
             fig_ph = go.Figure()
             fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
