@@ -43,7 +43,7 @@ def guardar_muestra(muestra):
     if worksheet is not None:
         worksheet.append_row(muestra)
 
-tecnicos = ["Fernando Cuesta", "Felix Cuadros"]
+tecnicos = ["José Luis Sanchez", "Wacner Montalvan"]
 locaciones = [
     "L95-AC-SUR-COM2", "L95-AC-SUR-PTAP", "L95-AC-SUR-GC",
     "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
@@ -59,7 +59,7 @@ if "menu" not in st.session_state:
 
 # Sidebar de navegación
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
-st.sidebar.header("📂 Navegación")
+st.sidebar.header("📂 Menú")
 menu_options = ["📊 KPIs y Análisis"]
 if st.session_state['logueado']:
     menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
