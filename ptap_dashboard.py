@@ -1,18 +1,32 @@
 import streamlit as st
-import pandas as pd
+from datetime import datetime, date
 import gspread
-import plotly.graph_objects as go
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+import pandas as pd
 import pytz
+import re
 
-USUARIO = "admin"
-PASSWORD = "1234"
+st.set_page_config(
+    page_title="Logística - Pasajeros",
+    page_icon="https://petrotalcorp.com/wp-content/uploads/2023/10/cropped-favicon-32x32.png",
+    layout="wide"
+)
+
+st.image("assets/logo_petrotal.png", width=220)
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
+
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u1iu85t4IknDLk50GfZFB-OQvmkO8hHwPVMPNeSDOuA/edit#gid=0"
+
+def ahora_lima():
+    utc = pytz.utc
+    lima = pytz.timezone("America/Lima")
+    now_utc = datetime.utcnow().replace(tzinfo=utc)
+    now_lima = now_utc.astimezone(lima)
+    return now_lima.strftime("%Y-%m-%d %H:%M:%S")
 
 @st.cache_resource(show_spinner=False)
 def get_worksheet():
@@ -20,204 +34,180 @@ def get_worksheet():
         st.secrets["gcp_service_account"], scopes=scope
     )
     gc = gspread.authorize(creds)
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/19AZGamcT9AIkV6aR4Xs7CCObgBo8xKFlv4eXfrAUJuU/edit?usp=sharing"
     sh = gc.open_by_url(SHEET_URL)
-    return sh.sheet1
+    worksheet = sh.worksheet("Solicitudes")
+    return worksheet
 
-worksheet = None
-try:
-    worksheet = get_worksheet()
-except Exception as e:
-    st.error(f"Error conectando a Google Sheets: {e}")
+def save_to_sheet(row):
+    ws = get_worksheet()
+    ws.append_row(row)
 
-def leer_datos():
-    if worksheet is None:
-        return pd.DataFrame()
-    data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
-    if not df.empty and "Fecha" in df.columns:
-        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+def get_all_requests():
+    ws = get_worksheet()
+    data = ws.get_all_values()
+    headers = data[0]
+    df = pd.DataFrame(data[1:], columns=headers)
     return df
 
-def guardar_muestra(muestra):
-    if worksheet is not None:
-        worksheet.append_row(muestra)
+def update_request(row_idx, area, estado, aprobador, comentario):
+    ws = get_worksheet()
+    fecha_revision = ahora_lima()
+    # Mapear columna por área
+    cols = {
+        "Security": (17, 18, 19, 20),      # Estado, Comentario, Aprobador, Fecha
+        "QHS":      (21, 22, 23, 24),
+        "Logística":(25, 26, 27, 28)
+    }
+    col_estado, col_coment, col_aprobador, col_fecha = cols[area]
+    ws.update_cell(row_idx + 2, col_estado, estado)
+    ws.update_cell(row_idx + 2, col_coment, comentario)
+    ws.update_cell(row_idx + 2, col_aprobador, aprobador)
+    ws.update_cell(row_idx + 2, col_fecha, fecha_revision)
 
-tecnicos = ["José Luis Sanchez", "Wacner Montalvan"]
-locaciones = [
-    "L95-AC-SUR-COM2", "L95-AC-SUR-PTAP", "L95-AC-SUR-GC",
-    "L95-AC-SUR-HSE-01", "L95-AC-SUR-HSE-02", "L95-AC-SUR-PROD"
-]
+def es_correo_valido(email):
+    regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return bool(re.match(regex, email))
 
-# Estado inicial de sesión y navegación
-if "logueado" not in st.session_state:
-    st.session_state['logueado'] = False
-if "show_login" not in st.session_state:
-    st.session_state['show_login'] = False
-if "menu" not in st.session_state:
-    st.session_state['menu'] = "📊 KPIs y Análisis"
+menu = st.sidebar.selectbox(
+    "Seleccione módulo",
+    ["Solicitud de Cupo", "Panel Security", "Panel QHS", "Panel Logística"]
+)
 
-# Sidebar de navegación
-st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
-st.sidebar.header("📂 Menú")
-menu_options = ["📊 KPIs y Análisis"]
-if st.session_state['logueado']:
-    menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
+if menu == "Solicitud de Cupo":
+    st.header("Solicitud de cupo de transporte")
+    st.info("Completa el siguiente formulario para solicitar el cupo de transporte de ingreso al Lote 95. Solo se permite registrar un pasajero por solicitud.")
 
-# Control de menú desde la sesión, así no hay doble click nunca
-if st.session_state['show_login']:
-    st.session_state['menu'] = "login"
-else:
-    selected = st.sidebar.radio("Ir a:", menu_options, index=menu_options.index(st.session_state['menu']))
-    st.session_state['menu'] = selected
+    today = date.today()
+    min_birthdate = date(1950, 1, 1)
+    max_birthdate = date(today.year - 18, today.month, today.day)
 
-if not st.session_state['logueado']:
-    if not st.session_state['show_login']:
-        if st.sidebar.button("Iniciar sesión"):
-            st.session_state['show_login'] = True
-    else:
-        # No mostrar KPIs, solo login o volver
-        pass
-else:
-    # Solo mostrar logout si está logueado
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state['logueado'] = False
-        st.session_state['show_login'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
-        st.success("Sesión cerrada. Solo puedes ver KPIs.")
+    with st.form("solicitud_cupo"):
+        responsable_nombre = st.text_input("Responsable de la solicitud (nombre completo)", max_chars=60)
+        responsable_correo = st.text_input("Correo electrónico del responsable", max_chars=60)
+        fecha_solicitud = st.date_input("Fecha de Solicitud", value=today, min_value=today, max_value=today)
 
-# Vista de Login
-def show_login():
-    st.title("Acceso restringido")
-    with st.form("login_form", clear_on_submit=False):
-        usuario = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        # Dos botones, uno debajo del otro
-        login_btn = st.form_submit_button("Ingresar")
-        volver_btn = st.form_submit_button("Volver a KPIs y Análisis")
-        
-    if login_btn:
-        if usuario == USUARIO and password == PASSWORD:
-            st.session_state['logueado'] = True
-            st.session_state['show_login'] = False
-            st.session_state['menu'] = "➕ Ingreso de muestra"
-            st.success("Acceso concedido. Ya puedes usar todas las secciones.")
+        st.markdown("**Datos del pasajero a ingresar:**")
+        nombre = st.text_input("Nombre completo del pasajero", max_chars=60)
+        dni = st.text_input("DNI / CE", max_chars=15)
+        fecha_nacimiento = st.date_input("Fecha de nacimiento", min_value=min_birthdate, max_value=max_birthdate)
+        genero = st.selectbox("Género", ["Masculino", "Femenino", "Otro"])
+        nacionalidad = st.text_input("Nacionalidad")
+        procedencia = st.text_input("Procedencia (Ciudad de origen)")
+        cargo = st.text_input("Puesto / Cargo")
+        empresa = st.text_input("Empresa contratista")
+        fecha_ingreso = st.date_input("Fecha de ingreso solicitada", min_value=today)
+        lugar_embarque = st.selectbox("Lugar de embarque", ["Iquitos", "Nauta", "Otros"])
+        tiempo_permanencia = st.text_input("Tiempo estimado de permanencia (en días)", max_chars=10)
+        observaciones = st.text_area("Observaciones relevantes (salud, alimentación, otros)", max_chars=200)
+
+        submitted = st.form_submit_button("Enviar Solicitud")
+
+    if submitted:
+        campos_texto = {
+            "Responsable de la solicitud": responsable_nombre,
+            "Correo electrónico del responsable": responsable_correo,
+            "Nombre completo del pasajero": nombre,
+            "DNI / CE": dni,
+            "Nacionalidad": nacionalidad,
+            "Procedencia (Ciudad de origen)": procedencia,
+            "Puesto / Cargo": cargo,
+            "Empresa contratista": empresa,
+            "Tiempo estimado de permanencia (en días)": tiempo_permanencia
+        }
+        campos_vacios = [k for k, v in campos_texto.items() if not v.strip()]
+        correo_ok = es_correo_valido(responsable_correo)
+
+        errores = []
+        if campos_vacios:
+            errores.append(f"Completa los siguientes campos obligatorios: {', '.join(campos_vacios)}")
+        if not correo_ok:
+            errores.append("El correo electrónico no es válido. Ejemplo: nombre@dominio.com")
+        if fecha_solicitud != today:
+            errores.append("La fecha de solicitud debe ser la del día de hoy.")
+        if not (min_birthdate <= fecha_nacimiento <= max_birthdate):
+            errores.append("La fecha de nacimiento debe ser entre 1950 y una edad mínima de 18 años.")
+
+        if errores:
+            for err in errores:
+                st.error(err)
         else:
-            st.error("Usuario o contraseña incorrectos.")
-            st.session_state['logueado'] = False
+            # Agrega campos para los 3 flujos de aprobación (vacíos)
+            extra_cols = ["Pendiente", "", "", "",   # Security
+                          "Pendiente", "", "", "",   # QHS
+                          "Pendiente", "", "", ""]   # Logística
+            timestamp_lima = ahora_lima()
+            row = [
+                timestamp_lima, fecha_solicitud.strftime("%Y-%m-%d"),
+                responsable_nombre, responsable_correo,
+                nombre, dni, fecha_nacimiento.strftime("%Y-%m-%d"), genero, nacionalidad,
+                procedencia, cargo, empresa, fecha_ingreso.strftime("%Y-%m-%d"),
+                lugar_embarque, tiempo_permanencia, observaciones
+            ] + extra_cols
+            save_to_sheet(row)
+            st.success(
+                "¡Solicitud registrada correctamente! Security, QHS y Logística revisarán tu solicitud.")
+            st.balloons()
 
-    if volver_btn:
-        st.session_state['show_login'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
+def panel_aprobacion(area, pw_requerido):
+    st.header(f"Panel de aprobación - {area}")
+    pw = st.text_input(f"Ingrese contraseña de {area}:", type="password")
+    if pw != pw_requerido:
+        st.warning("Acceso restringido.")
+        st.stop()
 
-
-# Lógica de qué mostrar (navegación)
-if st.session_state['menu'] == "login":
-    show_login()
-    st.stop()
-
-if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['logueado']:
-    st.title("➕ Registro de nueva muestra")
-    col1, col2 = st.columns(2)
-    tz = pytz.timezone("America/Lima")
-    now = datetime.now(tz)
-    with col1:
-        fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
-        hora = now.time().strftime("%H:%M")
-        tecnico = st.selectbox("👷 Técnico", tecnicos)
-        locacion = st.selectbox("📍 Locación de muestreo", locaciones)
-    with col2:
-        ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
-        turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
-        cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
-    observaciones = st.text_area("📝 Observaciones")
-    foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-    if st.button("Guardar muestra"):
-        nombre_foto = ""
-        if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
-            nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
-        muestra = [
-            fecha.strftime("%Y-%m-%d"),
-            hora,
-            tecnico,
-            locacion,
-            ph,
-            turbidez,
-            cloro,
-            observaciones,
-            nombre_foto
-        ]
-        guardar_muestra(muestra)
-        st.success("✅ Registro guardado en Google Sheets correctamente.")
-
-elif st.session_state['menu'] == "📊 KPIs y Análisis":
-    st.title("📊 KPIs y Análisis de datos por locación")
-    df = leer_datos()
-    if not df.empty:
-        locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
-        df_filtrado = df[df["Locación"] == locacion_seleccionada]
-        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
-        if not ultimos_30.empty:
-            st.subheader("pH")
-            fig_ph = go.Figure()
-            fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
-            fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
-            fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_ph, use_container_width=True)
-            st.subheader("Turbidez (NTU)")
-            fig_turb = go.Figure()
-            fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
-            fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
-            fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
-            fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_turb, use_container_width=True)
-            st.subheader("Cloro Residual (mg/L)")
-            fig_cloro = go.Figure()
-            fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
-            fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_cloro, use_container_width=True)
-        else:
-            st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
+    st.success(f"Acceso concedido para {area}.")
+    df = get_all_requests()
+    if df.empty:
+        st.info("No hay solicitudes registradas aún.")
     else:
-        st.info("No hay datos registrados.")
-
-elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado']:
-    st.title("📄 Historial de muestras registradas")
-    df = leer_datos()
-    if not df.empty:
-        col1, col2 = st.columns(2)
-        min_fecha = df["Fecha"].min()
-        max_fecha = df["Fecha"].max()
-        if pd.isnull(min_fecha):
-            min_fecha = datetime.now().date()
+        if area == "Security":
+            pendientes = df[df["Estado Security"] == "Pendiente"]
+        elif area == "QHS":
+            pendientes = df[(df["Estado Security"] == "Aprobada") & (df["Estado QHS"] == "Pendiente")]
+        elif area == "Logística":
+            pendientes = df[(df["Estado Security"] == "Aprobada") & (df["Estado QHS"] == "Aprobada") & (df["Estado Logística"] == "Pendiente")]
         else:
-            min_fecha = min_fecha.date()
-        if pd.isnull(max_fecha):
-            max_fecha = datetime.now().date()
-        else:
-            max_fecha = max_fecha.date()
-        with col1:
-            fecha_ini = st.date_input("Desde", value=min_fecha)
-        with col2:
-            fecha_fin = st.date_input("Hasta", value=max_fecha)
-        filtrado = df[(df["Fecha"] >= pd.to_datetime(fecha_ini)) & (df["Fecha"] <= pd.to_datetime(fecha_fin))]
-        st.dataframe(filtrado)
-    else:
-        st.warning("No hay registros para mostrar.")
+            pendientes = pd.DataFrame()
 
-elif st.session_state['menu'] == "📥 Exportar" and st.session_state['logueado']:
-    st.title("📥 Exportar registros en Excel")
-    df = leer_datos()
-    if not df.empty:
-        st.download_button("📄 Descargar Excel", data=df.to_csv(index=False).encode("utf-8"), file_name="ptap_registros.csv", mime="text/csv")
-    else:
-        st.info("No hay datos para exportar.")
+        if pendientes.empty:
+            st.info(f"No hay solicitudes pendientes de aprobación para {area}.")
+        else:
+            for idx, row in pendientes.iterrows():
+                with st.expander(f"{row['Nombre Pasajero']} - Fecha Ingreso: {row['Fecha Ingreso']}"):
+                    st.write("**Responsable:**", row["Responsable"])
+                    st.write("**Correo Responsable:**", row["Correo Responsable"])
+                    st.write("**Pasajero:**", row["Nombre Pasajero"])
+                    st.write("**DNI:**", row["DNI"])
+                    st.write("**Fecha Nacimiento:**", row["Fecha Nacimiento"])
+                    st.write("**Género:**", row["Género"])
+                    st.write("**Nacionalidad:**", row["Nacionalidad"])
+                    st.write("**Procedencia:**", row["Procedencia"])
+                    st.write("**Cargo:**", row["Cargo"])
+                    st.write("**Empresa:**", row["Empresa"])
+                    st.write("**Fecha Ingreso:**", row["Fecha Ingreso"])
+                    st.write("**Lugar Embarque:**", row["Lugar Embarque"])
+                    st.write("**Tiempo Permanencia:**", row["Tiempo Permanencia"])
+                    st.write("**Observaciones:**", row["Observaciones"])
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        estado = st.selectbox("Acción", ["Aprobada", "Rechazada"], key=f"estado_{area}_{idx}")
+                    with col2:
+                        comentario = st.text_input("Comentario (opcional)", key=f"coment_{area}_{idx}")
+
+                    aprobador = st.text_input("Tu nombre (Aprobador)", key=f"aprobador_{area}_{idx}")
+
+                    if st.button("Registrar acción", key=f"btn_{area}_{idx}"):
+                        if not aprobador:
+                            st.warning("Por favor, ingresa tu nombre como aprobador.")
+                        else:
+                            update_request(idx, area, estado, aprobador, comentario)
+                            st.success(f"Solicitud {estado} registrada correctamente.")
+                            st.rerun()
+
+if menu == "Panel Security":
+    panel_aprobacion("Security", pw_requerido="security2024")
+elif menu == "Panel QHS":
+    panel_aprobacion("QHS", pw_requerido="qhs2024")
+elif menu == "Panel Logística":
+    panel_aprobacion("Logística", pw_requerido="logistica2024")
