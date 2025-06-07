@@ -59,6 +59,10 @@ if "menu" not in st.session_state:
 
 # Sidebar de navegación
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
+st.image(
+    "https://hcmpinturas.com/wp-content/uploads/2023/10/PetroTal-logo-star.png",
+    width=230
+)
 st.sidebar.header("📂 Menú")
 menu_options = ["📊 KPIs y Análisis"]
 if st.session_state['logueado']:
