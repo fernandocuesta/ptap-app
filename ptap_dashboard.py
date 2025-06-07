@@ -89,15 +89,6 @@ else:
 # Vista de Login
 def show_login():
     st.title("Acceso restringido")
-    usuario = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    col1, col2 = st.columns([1,1])
-    login_btn = col1.button("Ingresar")
-    volver_btn = col2.button("Volver a KPIs y Análisis")
-    if volver_btn:
-        st.session_state['show_login'] = False
-        st.session_state['menu'] = "📊 KPIs y Análisis"
-    elif login_btn:
     with st.form("login_form", clear_on_submit=False):
         usuario = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
@@ -109,7 +100,9 @@ def show_login():
         if usuario == USUARIO and password == PASSWORD:
             st.session_state['logueado'] = True
             st.session_state['show_login'] = False
-@@ -107,113 +106,118 @@
+            st.session_state['menu'] = "➕ Ingreso de muestra"
+            st.success("Acceso concedido. Ya puedes usar todas las secciones.")
+        else:
             st.error("Usuario o contraseña incorrectos.")
             st.session_state['logueado'] = False
 
