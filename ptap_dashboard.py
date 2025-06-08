@@ -10,7 +10,13 @@ USUARIO = "admin"
 PASSWORD = "1234"
 
 USUARIO = "lsangama"
-PASSWORD = "1234"
+PASSWORD = "lsangama2025"
+
+USUARIO = "jpadilla"
+PASSWORD = "jpadilla2025"
+
+USUARIO = "jsoto"
+PASSWORD = "jsoto2025"
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
