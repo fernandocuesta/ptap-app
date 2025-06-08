@@ -9,6 +9,9 @@ import pytz
 USUARIO = "admin"
 PASSWORD = "1234"
 
+USUARIO = "jperez"
+PASSWORD = "jperez2025"
+
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
