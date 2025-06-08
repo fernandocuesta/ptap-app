@@ -43,7 +43,7 @@ def guardar_muestra(muestra):
     if worksheet is not None:
         worksheet.append_row(muestra)
 
-tecnicos = ["José Luis Sanchez", "Wacner Montalvan"]
+tecnicos = ["Luis Sangama Ricopa", "Jorge Perez Padilla"]
 locaciones = [
     "Planta de Agua Potable" , "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
     "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
@@ -128,7 +128,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     with col1:
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
         hora = now.time().strftime("%H:%M")
-        tecnico = st.selectbox("👷 Técnico", tecnicos)
+        tecnico = st.selectbox("👷 Operador", tecnicos)
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
     with col2:
         ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
