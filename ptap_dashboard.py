@@ -10,7 +10,7 @@ USUARIO = "admin"
 PASSWORD = "1234"
 
 USUARIO = "lsangama"
-PASSWORD = "lsangama2025"
+PASSWORD = "1234"
 
 USUARIO = "jperez"
 PASSWORD = "jperez2025"
