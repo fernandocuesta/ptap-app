@@ -14,7 +14,7 @@ USUARIOS = {
     "jsoto": "jsoto2025",
 }
 
-# Relacion usuario->nombre completo
+# Relación usuario->nombre completo
 USUARIOS_NOMBRES = {
     "jperez": "Jorge Perez Padilla",
     "lsangama": "Luis Sangama Ricopa",
@@ -58,6 +58,12 @@ def guardar_muestra(muestra):
 tecnicos = ["Luis Sangama Ricopa", "Jorge Perez Padilla", "Jose Soto Dávila"]
 locaciones = [
     "Planta de Agua Potable" , "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
+    "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
+]
+
+# Locaciones donde solo se debe registrar cloro residual
+SOLO_CLORO_LOCACIONES = [
+    "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
     "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
 ]
 
@@ -139,12 +145,11 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     usuario_actual = st.session_state.get("usuario", "")
     is_admin = usuario_actual == "admin"
     
-    # Determinar el nombre del operador para guardar (o permitir elegir si es admin)
+    # Operador: admin elige, usuarios normales no editan
     if is_admin:
         with col1:
             tecnico = st.selectbox("👷 Operador", tecnicos)
     else:
-        # Si es usuario operador, mostrar nombre no editable
         nombre_tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
         with col1:
             st.markdown("**👷 Operador**")
@@ -155,10 +160,17 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
         hora = now.time().strftime("%H:%M")
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
+    
+    # Mostrar campos según locación
     with col2:
-        ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
-        turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
-        cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
+        if locacion in SOLO_CLORO_LOCACIONES:
+            ph = ""
+            turbidez = ""
+            cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
+        else:
+            ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
+            turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
+            cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
     if st.button("Guardar muestra"):
