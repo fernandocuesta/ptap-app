@@ -12,8 +12,8 @@ PASSWORD = "1234"
 USUARIO = "lsangama"
 PASSWORD = "lsangama2025"
 
-USUARIO = "jpadilla"
-PASSWORD = "jpadilla2025"
+USUARIO = "jperez"
+PASSWORD = "jperez2025"
 
 USUARIO = "jsoto"
 PASSWORD = "jsoto2025"
