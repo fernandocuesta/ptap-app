@@ -155,7 +155,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
         st.success("✅ Registro guardado en Google Sheets correctamente.")
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
-    st.title("📊 KPIs y Análisis de datos por locación")
+    st.title("📊 Resultados de monitoreo de parámetros en agua potable")
     df = leer_datos()
     if not df.empty:
         locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
