@@ -6,9 +6,6 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
-USUARIO = "admin"
-PASSWORD = "1234"
-
 USUARIO = "jperez"
 PASSWORD = "jperez2025"
 
