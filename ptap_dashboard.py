@@ -46,7 +46,7 @@ def guardar_muestra(muestra):
 tecnicos = ["José Luis Sanchez", "Wacner Montalvan"]
 locaciones = [
     "Planta de Agua Potable" , "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
-    "Dispensador - HSE 01", "Diepnsador - HSE 02", "Dispensador - Producción"
+    "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
 ]
 
 # Estado inicial de sesión y navegación
