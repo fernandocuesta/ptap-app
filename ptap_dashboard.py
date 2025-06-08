@@ -43,7 +43,7 @@ def guardar_muestra(muestra):
     if worksheet is not None:
         worksheet.append_row(muestra)
 
-tecnicos = ["Luis Sangama Ricopa", "Jorge Perez Padilla"]
+tecnicos = ["Luis Sangama Ricopa", "Jorge Perez Padilla", "Jose Soto Dávila"]
 locaciones = [
     "Planta de Agua Potable" , "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
     "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
