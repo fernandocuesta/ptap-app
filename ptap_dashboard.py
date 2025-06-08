@@ -6,8 +6,20 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
 
-USUARIO = "admin"
-PASSWORD = "1234"
+# === USUARIOS ===
+USUARIOS = {
+    "admin": "1234",
+    "jperez": "jperez2025",
+    "lsangama": "lsangama2025",
+    "jsoto": "jsoto2025",
+}
+
+# Relacion usuario->nombre completo
+USUARIOS_NOMBRES = {
+    "jperez": "Jorge Perez Padilla",
+    "lsangama": "Luis Sangama Ricopa",
+    "jsoto": "Jose Soto Dávila",
+}
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -49,13 +61,15 @@ locaciones = [
     "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
 ]
 
-# Estado inicial de sesión y navegación
+# === Estado inicial de sesión y navegación ===
 if "logueado" not in st.session_state:
     st.session_state['logueado'] = False
 if "show_login" not in st.session_state:
     st.session_state['show_login'] = False
 if "menu" not in st.session_state:
     st.session_state['menu'] = "📊 KPIs y Análisis"
+if "usuario" not in st.session_state:
+    st.session_state['usuario'] = ""
 
 # Sidebar de navegación
 st.set_page_config(page_title="Control Logístico PTAP", page_icon="🚛", layout="wide")
@@ -68,7 +82,6 @@ menu_options = ["📊 KPIs y Análisis"]
 if st.session_state['logueado']:
     menu_options = ["➕ Ingreso de muestra", "📊 KPIs y Análisis", "📄 Historial", "📥 Exportar"]
 
-# Control de menú desde la sesión, así no hay doble click nunca
 if st.session_state['show_login']:
     st.session_state['menu'] = "login"
 else:
@@ -80,30 +93,29 @@ if not st.session_state['logueado']:
         if st.sidebar.button("Iniciar sesión"):
             st.session_state['show_login'] = True
     else:
-        # No mostrar KPIs, solo login o volver
         pass
 else:
-    # Solo mostrar logout si está logueado
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logueado'] = False
         st.session_state['show_login'] = False
         st.session_state['menu'] = "📊 KPIs y Análisis"
+        st.session_state['usuario'] = ""
         st.success("Sesión cerrada. Solo puedes ver KPIs.")
 
-# Vista de Login
+# === Vista de Login ===
 def show_login():
     st.title("Acceso restringido")
     with st.form("login_form", clear_on_submit=False):
         usuario = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
-        # Dos botones, uno debajo del otro
         login_btn = st.form_submit_button("Ingresar")
         volver_btn = st.form_submit_button("Volver a KPIs y Análisis")
         
     if login_btn:
-        if usuario == USUARIO and password == PASSWORD:
+        if usuario in USUARIOS and password == USUARIOS[usuario]:
             st.session_state['logueado'] = True
             st.session_state['show_login'] = False
+            st.session_state['usuario'] = usuario
             st.session_state['menu'] = "➕ Ingreso de muestra"
             st.success("Acceso concedido. Ya puedes usar todas las secciones.")
         else:
@@ -114,8 +126,7 @@ def show_login():
         st.session_state['show_login'] = False
         st.session_state['menu'] = "📊 KPIs y Análisis"
 
-
-# Lógica de qué mostrar (navegación)
+# === Lógica de navegación y contenido ===
 if st.session_state['menu'] == "login":
     show_login()
     st.stop()
@@ -125,10 +136,24 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     col1, col2 = st.columns(2)
     tz = pytz.timezone("America/Lima")
     now = datetime.now(tz)
+    usuario_actual = st.session_state.get("usuario", "")
+    is_admin = usuario_actual == "admin"
+    
+    # Determinar el nombre del operador para guardar (o permitir elegir si es admin)
+    if is_admin:
+        with col1:
+            tecnico = st.selectbox("👷 Operador", tecnicos)
+    else:
+        # Si es usuario operador, mostrar nombre no editable
+        nombre_tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
+        with col1:
+            st.markdown("**👷 Operador**")
+            st.info(f"{nombre_tecnico}")
+        tecnico = nombre_tecnico
+
     with col1:
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
         hora = now.time().strftime("%H:%M")
-        tecnico = st.selectbox("👷 Operador", tecnicos)
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
     with col2:
         ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
