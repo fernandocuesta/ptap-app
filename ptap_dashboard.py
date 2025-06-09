@@ -144,14 +144,25 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     now = datetime.now(tz)
     usuario_actual = st.session_state.get("usuario", "")
     is_admin = usuario_actual == "admin"
+
     with col1:
-        tecnico = st.selectbox("👷 Operador", TECNICOS) if is_admin else USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
-        if not is_admin:
+        # Operador
+        if is_admin:
+            tecnico = st.selectbox("👷 Operador", TECNICOS)
+        else:
+            tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
             st.markdown("**👷 Operador**")
             st.info(tecnico)
+
+        # Fecha
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
+
+        # Hora de toma de muestra: valor por defecto = ahora, pero editable por usuario
         hora_muestra = st.time_input("Hora de Toma de muestra", value=now.time())
+
+        # Locación
         locacion = st.selectbox("📍 Locación de muestreo", LOCACIONES)
+
     with col2:
         loc_norm = locacion.strip().lower()
         ph = turbidez = ""
@@ -161,28 +172,29 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
             turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
             cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
+
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-    hora_registro = now.strftime("%H:%M:%S")
- if st.button("Guardar muestra"):
-    nombre_foto = ""
-    if foto and getattr(foto, "name", None):
-        nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
-    muestra = [
-        fecha.strftime("%Y-%m-%d"),         # Fecha
-        hora_muestra.strftime("%H:%M"),     # Hora de Toma (debe ser la que el usuario seleccionó)
-        hora_registro,                      # Hora de Registro (cuando se guarda el registro)
-        tecnico,
-        locacion,
-        ph,
-        turbidez,
-        cloro,
-        observaciones,
-        nombre_foto
-    ]
-    guardar_muestra(muestra)
-    st.success("✅ Registro guardado correctamente.")
+    hora_registro = now.strftime("%H:%M:%S")   # Hora exacta al guardar
 
+    if st.button("Guardar muestra"):
+        nombre_foto = ""
+        if foto and getattr(foto, "name", None):
+            nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
+        muestra = [
+            fecha.strftime("%Y-%m-%d"),        # Fecha
+            hora_muestra.strftime("%H:%M"),    # Hora de Toma (la elegida por el usuario)
+            hora_registro,                     # Hora de Registro (cuando se presiona el botón)
+            tecnico,
+            locacion,
+            ph,
+            turbidez,
+            cloro,
+            observaciones,
+            nombre_foto
+        ]
+        guardar_muestra(muestra)
+        st.success("✅ Registro guardado correctamente.")
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Monitoreo de Parámetros en Agua Potable")
