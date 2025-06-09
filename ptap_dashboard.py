@@ -164,24 +164,25 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
     hora_registro = now.strftime("%H:%M:%S")
-    if st.button("Guardar muestra"):
-        nombre_foto = ""
-        if foto and getattr(foto, "name", None):
-            nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
-        muestra = [
-            fecha.strftime("%Y-%m-%d"),
-            hora_muestra.strftime("%H:%M"),
-            hora_registro,
-            tecnico,
-            locacion,
-            ph,
-            turbidez,
-            cloro,
-            observaciones,
-            nombre_foto
-        ]
-        guardar_muestra(muestra)
-        st.success("✅ Registro guardado correctamente.")
+ if st.button("Guardar muestra"):
+    nombre_foto = ""
+    if foto and getattr(foto, "name", None):
+        nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
+    muestra = [
+        fecha.strftime("%Y-%m-%d"),         # Fecha
+        hora_muestra.strftime("%H:%M"),     # Hora de Toma (debe ser la que el usuario seleccionó)
+        hora_registro,                      # Hora de Registro (cuando se guarda el registro)
+        tecnico,
+        locacion,
+        ph,
+        turbidez,
+        cloro,
+        observaciones,
+        nombre_foto
+    ]
+    guardar_muestra(muestra)
+    st.success("✅ Registro guardado correctamente.")
+
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Monitoreo de Parámetros en Agua Potable")
