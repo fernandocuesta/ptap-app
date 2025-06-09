@@ -146,21 +146,24 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     is_admin = usuario_actual == "admin"
 
     with col1:
-        # Operador
         if is_admin:
             tecnico = st.selectbox("👷 Operador", TECNICOS)
         else:
             tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
             st.markdown("**👷 Operador**")
             st.info(tecnico)
-
-        # Fecha
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
 
-        # Hora de toma de muestra: valor por defecto = ahora, pero editable por usuario
-        hora_muestra = st.time_input("Hora de Toma de muestra", value=now.time())
+        # --- FIX HORA DE TOMA DE MUESTRA ---
+        if "hora_toma_muestra" not in st.session_state:
+            st.session_state["hora_toma_muestra"] = now.time()
+        hora_muestra = st.time_input(
+            "Hora de Toma de muestra",
+            value=st.session_state["hora_toma_muestra"],
+            key="hora_toma_muestra"
+        )
+        # -------------------------------------
 
-        # Locación
         locacion = st.selectbox("📍 Locación de muestreo", LOCACIONES)
 
     with col2:
@@ -175,16 +178,16 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
 
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-    hora_registro = now.strftime("%H:%M:%S")   # Hora exacta al guardar
+    hora_registro = now.strftime("%H:%M:%S")
 
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto and getattr(foto, "name", None):
             nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
         muestra = [
-            fecha.strftime("%Y-%m-%d"),        # Fecha
-            hora_muestra.strftime("%H:%M"),    # Hora de Toma (la elegida por el usuario)
-            hora_registro,                     # Hora de Registro (cuando se presiona el botón)
+            fecha.strftime("%Y-%m-%d"),
+            hora_muestra.strftime("%H:%M"),
+            hora_registro,
             tecnico,
             locacion,
             ph,
@@ -195,6 +198,8 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
         ]
         guardar_muestra(muestra)
         st.success("✅ Registro guardado correctamente.")
+        # Limpia la hora solo si quieres reiniciar a la hora actual tras guardar
+        st.session_state["hora_toma_muestra"] = now.time()
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Monitoreo de Parámetros en Agua Potable")
