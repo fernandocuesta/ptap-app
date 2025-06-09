@@ -3,7 +3,7 @@ import pandas as pd
 import gspread
 import plotly.graph_objects as go
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+from datetime import datetime, time
 import pytz
 
 # === USUARIOS ===
@@ -46,8 +46,12 @@ def leer_datos():
         return pd.DataFrame()
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
-    if not df.empty and "Fecha" in df.columns:
-        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    if not df.empty and "Fecha" in df.columns and "Hora de toma" in df.columns:
+        # Crea columna de datetime combinando fecha y hora de toma
+        df["Fecha_Hora"] = pd.to_datetime(
+            df["Fecha"].astype(str) + " " + df["Hora de toma"].astype(str),
+            errors="coerce"
+        )
     return df
 
 def guardar_muestra(muestra):
@@ -157,7 +161,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
 
     with col1:
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
-        hora = now.time().strftime("%H:%M")
+        hora_muestra = st.time_input("Hora de toma de muestra", value=now.time())
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
     
     # Mostrar campos según locación
@@ -173,13 +177,17 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
+
+    hora_registro = now.strftime("%H:%M:%S")
+
     if st.button("Guardar muestra"):
         nombre_foto = ""
         if foto and hasattr(foto, "name") and isinstance(foto.name, str) and foto.name:
             nombre_foto = f"{fecha.strftime('%Y%m%d')}_{locacion.replace(' ', '_')}_{foto.name}"
         muestra = [
             fecha.strftime("%Y-%m-%d"),
-            hora,
+            hora_muestra.strftime("%H:%M"),
+            hora_registro,
             tecnico,
             locacion,
             ph,
@@ -195,12 +203,11 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Resultados de Monitoreo de Parámetros en Agua Potable")
     df = leer_datos()
     if not df.empty:
-        # Normalizar lista SOLO_CLORO_LOCACIONES para comparación
         locaciones_mostrar = sorted(df["Locación"].dropna().unique())
         locacion_seleccionada = st.selectbox("Locación", locaciones_mostrar)
         loc_norm = locacion_seleccionada.strip().lower()
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
-        ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
+        ultimos_30 = df_filtrado[df_filtrado["Fecha_Hora"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha_Hora")
         # ---- FIX DECIMALES para gráficos
         for col in ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]:
             if col in ultimos_30.columns:
@@ -213,12 +220,14 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 )
         # ---------------
         if not ultimos_30.empty:
+            # Eje x: Fecha + Hora de toma de muestra
+            x_axis = ultimos_30["Fecha_Hora"]
             if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
                 # Solo mostrar cloro residual
                 st.subheader("Cloro Residual (mg/L)")
                 fig_cloro = go.Figure()
                 fig_cloro.add_trace(go.Scatter(
-                    x=ultimos_30["Fecha"],
+                    x=x_axis,
                     y=ultimos_30["Cloro Residual (mg/L)"],
                     mode="lines+markers",
                     name="Cloro",
@@ -229,14 +238,14 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
                 fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
                 fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
-                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha y hora de muestra", height=300)
                 st.plotly_chart(fig_cloro, use_container_width=True)
             else:
                 # Mostrar los tres: pH, Turbidez, Cloro
                 st.subheader("pH")
                 fig_ph = go.Figure()
                 fig_ph.add_trace(go.Scatter(
-                    x=ultimos_30["Fecha"],
+                    x=x_axis,
                     y=ultimos_30["pH"],
                     mode="lines+markers",
                     name="pH",
@@ -246,13 +255,13 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
                 fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
                 fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
-                fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
+                fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha y hora de muestra", height=300)
                 st.plotly_chart(fig_ph, use_container_width=True)
 
                 st.subheader("Turbidez (NTU)")
                 fig_turb = go.Figure()
                 fig_turb.add_trace(go.Scatter(
-                    x=ultimos_30["Fecha"],
+                    x=x_axis,
                     y=ultimos_30["Turbidez (NTU)"],
                     mode="lines+markers",
                     name="Turbidez",
@@ -261,13 +270,13 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
                 fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
                 fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
-                fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
+                fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha y hora de muestra", height=300)
                 st.plotly_chart(fig_turb, use_container_width=True)
 
                 st.subheader("Cloro Residual (mg/L)")
                 fig_cloro = go.Figure()
                 fig_cloro.add_trace(go.Scatter(
-                    x=ultimos_30["Fecha"],
+                    x=x_axis,
                     y=ultimos_30["Cloro Residual (mg/L)"],
                     mode="lines+markers",
                     name="Cloro",
@@ -278,7 +287,7 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
                 fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
                 fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
-                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha y hora de muestra", height=300)
                 st.plotly_chart(fig_cloro, use_container_width=True)
         else:
             st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
@@ -321,9 +330,9 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
                 )
         # Columnas a mostrar según locación
         if loc_hist_norm in SOLO_CLORO_LOCACIONES_NORM:
-            columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+            columnas = ['Fecha', 'Hora de toma', 'Hora de registro', 'Técnico', 'Locación', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
         else:
-            columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+            columnas = ['Fecha', 'Hora de toma', 'Hora de registro', 'Técnico', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
         columnas = [c for c in columnas if c in filtrado.columns]
         st.dataframe(filtrado[columnas])
     else:
