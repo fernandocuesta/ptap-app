@@ -257,22 +257,45 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
         locacion_hist = st.selectbox("Locación", locaciones_mostrar)
         loc_hist_norm = locacion_hist.strip().lower()
         df_filtrado = df[df["Locación"] == locacion_hist]
-        min_fecha = df_filtrado["Fecha"].min()
-        max_fecha = df_filtrado["Fecha"].max()
-        min_fecha = min_fecha.date() if not pd.isnull(min_fecha) else datetime.now().date()
-        max_fecha = max_fecha.date() if not pd.isnull(max_fecha) else datetime.now().date()
+        
+        # --- Manejo robusto de fechas mínimas y máximas ---
+        min_fecha_raw = df_filtrado["Fecha"].min()
+        max_fecha_raw = df_filtrado["Fecha"].max()
+
+        try:
+            min_fecha = pd.to_datetime(min_fecha_raw).date()
+        except Exception:
+            min_fecha = datetime.now().date()
+        try:
+            max_fecha = pd.to_datetime(max_fecha_raw).date()
+        except Exception:
+            max_fecha = datetime.now().date()
+        # ---------------------------------------------------
+
         col1, col2 = st.columns(2)
         with col1:
             fecha_ini = st.date_input("Desde", value=min_fecha)
         with col2:
             fecha_fin = st.date_input("Hasta", value=max_fecha)
-        filtrado = df_filtrado[(df_filtrado["Fecha"] >= pd.to_datetime(fecha_ini)) & (df_filtrado["Fecha"] <= pd.to_datetime(fecha_fin))]
-        filtrado = convertir_decimales(filtrado, ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"])
-        columnas = ['Fecha', 'Hora de Toma', 'Hora de registro', 'Técnico', 'Locación']
+        filtrado = df_filtrado[
+            (pd.to_datetime(df_filtrado["Fecha"]) >= pd.to_datetime(fecha_ini)) &
+            (pd.to_datetime(df_filtrado["Fecha"]) <= pd.to_datetime(fecha_fin))
+        ]
+        # ---- FIX DECIMALES para historial
+        for col in ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]:
+            if col in filtrado.columns:
+                filtrado[col] = (
+                    filtrado[col]
+                    .astype(str)
+                    .str.replace(",", ".", regex=False)
+                    .replace("", None)
+                    .astype(float)
+                )
+        # Columnas a mostrar según locación
         if loc_hist_norm in SOLO_CLORO_LOCACIONES_NORM:
-            columnas += ['Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+            columnas = ['Fecha', 'Hora de Toma', 'Hora de Registro', 'Operador', 'Locación', 'Cloro Residual (mg/L)', 'Observaciones', 'Foto']
         else:
-            columnas += ['pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+            columnas = ['Fecha', 'Hora de Toma', 'Hora de Registro', 'Operador', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', 'Observaciones', 'Foto']
         columnas = [c for c in columnas if c in filtrado.columns]
         st.dataframe(filtrado[columnas])
     else:
