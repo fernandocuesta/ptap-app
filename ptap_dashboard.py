@@ -85,8 +85,8 @@ def leer_datos():
         worksheet = get_worksheet()
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
-        if not df.empty and "Fecha" in df and "Hora de toma" in df:
-            df["Fecha_Hora"] = pd.to_datetime(df["Fecha"].astype(str) + " " + df["Hora de toma"].astype(str), errors="coerce")
+        if not df.empty and "Fecha" in df and "Hora de Toma" in df:
+            df["Fecha_Hora"] = pd.to_datetime(df["Fecha"].astype(str) + " " + df["Hora de Toma"].astype(str), errors="coerce")
         return df
     except Exception as e:
         st.error(f"Error conectando a Google Sheets: {e}")
@@ -150,7 +150,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             st.markdown("**👷 Operador**")
             st.info(tecnico)
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
-        hora_muestra = st.time_input("Hora de toma de muestra", value=now.time())
+        hora_muestra = st.time_input("Hora de Toma de muestra", value=now.time())
         locacion = st.selectbox("📍 Locación de muestreo", LOCACIONES)
     with col2:
         loc_norm = locacion.strip().lower()
@@ -248,7 +248,7 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
             fecha_fin = st.date_input("Hasta", value=max_fecha)
         filtrado = df_filtrado[(df_filtrado["Fecha"] >= pd.to_datetime(fecha_ini)) & (df_filtrado["Fecha"] <= pd.to_datetime(fecha_fin))]
         filtrado = convertir_decimales(filtrado, ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"])
-        columnas = ['Fecha', 'Hora de toma', 'Hora de registro', 'Técnico', 'Locación']
+        columnas = ['Fecha', 'Hora de Toma', 'Hora de registro', 'Técnico', 'Locación']
         if loc_hist_norm in SOLO_CLORO_LOCACIONES_NORM:
             columnas += ['Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
         else:
