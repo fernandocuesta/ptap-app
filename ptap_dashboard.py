@@ -184,7 +184,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
         st.success("✅ Registro guardado correctamente.")
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
-    st.title("📊 dddddMonitoreo de Parámetros en Agua Potable")
+    st.title("📊 Monitoreo de Parámetros en Agua Potable")
     df = leer_datos()
     if not df.empty:
         locaciones_mostrar = sorted(df["Locación"].dropna().unique())
