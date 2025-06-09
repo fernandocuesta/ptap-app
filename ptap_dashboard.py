@@ -199,33 +199,73 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
         if not ultimos_30.empty:
-            st.subheader("pH")
-            fig_ph = go.Figure()
-            fig_ph.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["pH"], mode="lines+markers", name="pH", line=dict(color="blue")))
-            fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
-            fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
-            fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_ph, use_container_width=True)
-            st.subheader("Turbidez (NTU)")
-            fig_turb = go.Figure()
-            fig_turb.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Turbidez (NTU)"], mode="lines+markers", name="Turbidez", line=dict(color="orange")))
-            fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
-            fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
-            fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_turb, use_container_width=True)
-            st.subheader("Cloro Residual (mg/L)")
-            fig_cloro = go.Figure()
-            fig_cloro.add_trace(go.Scatter(x=ultimos_30["Fecha"], y=ultimos_30["Cloro Residual (mg/L)"], mode="lines+markers", name="Cloro", line=dict(color="purple")))
-            fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
-            fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
-            fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
-            fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
-            st.plotly_chart(fig_cloro, use_container_width=True)
+            if locacion_seleccionada in SOLO_CLORO_LOCACIONES:
+                # Solo mostrar cloro residual
+                st.subheader("Cloro Residual (mg/L)")
+                fig_cloro = go.Figure()
+                fig_cloro.add_trace(go.Scatter(
+                    x=ultimos_30["Fecha"],
+                    y=ultimos_30["Cloro Residual (mg/L)"],
+                    mode="lines+markers",
+                    name="Cloro",
+                    line=dict(color="purple")
+                ))
+                fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+                fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
+                fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
+                fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
+                fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
+                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+                st.plotly_chart(fig_cloro, use_container_width=True)
+            else:
+                # Mostrar los tres: pH, Turbidez, Cloro
+                st.subheader("pH")
+                fig_ph = go.Figure()
+                fig_ph.add_trace(go.Scatter(
+                    x=ultimos_30["Fecha"],
+                    y=ultimos_30["pH"],
+                    mode="lines+markers",
+                    name="pH",
+                    line=dict(color="blue")
+                ))
+                fig_ph.add_hrect(y0=6.5, y1=8.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+                fig_ph.add_hrect(y0=6.0, y1=9.0, fillcolor="yellow", opacity=0.12, line_width=0)
+                fig_ph.add_hrect(y0=0, y1=6.0, fillcolor="red", opacity=0.07, line_width=0)
+                fig_ph.add_hrect(y0=9.0, y1=14.0, fillcolor="red", opacity=0.07, line_width=0)
+                fig_ph.update_layout(yaxis_title="pH", xaxis_title="Fecha", height=300)
+                st.plotly_chart(fig_ph, use_container_width=True)
+
+                st.subheader("Turbidez (NTU)")
+                fig_turb = go.Figure()
+                fig_turb.add_trace(go.Scatter(
+                    x=ultimos_30["Fecha"],
+                    y=ultimos_30["Turbidez (NTU)"],
+                    mode="lines+markers",
+                    name="Turbidez",
+                    line=dict(color="orange")
+                ))
+                fig_turb.add_hrect(y0=0, y1=5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo (<5)", annotation_position="top left")
+                fig_turb.add_hrect(y0=5, y1=10, fillcolor="yellow", opacity=0.13, line_width=0)
+                fig_turb.add_hrect(y0=10, y1=100, fillcolor="red", opacity=0.09, line_width=0)
+                fig_turb.update_layout(yaxis_title="Turbidez (NTU)", xaxis_title="Fecha", height=300)
+                st.plotly_chart(fig_turb, use_container_width=True)
+
+                st.subheader("Cloro Residual (mg/L)")
+                fig_cloro = go.Figure()
+                fig_cloro.add_trace(go.Scatter(
+                    x=ultimos_30["Fecha"],
+                    y=ultimos_30["Cloro Residual (mg/L)"],
+                    mode="lines+markers",
+                    name="Cloro",
+                    line=dict(color="purple")
+                ))
+                fig_cloro.add_hrect(y0=0.5, y1=1.5, fillcolor="green", opacity=0.15, line_width=0, annotation_text="Rango óptimo", annotation_position="top left")
+                fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
+                fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
+                fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
+                fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
+                fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha", height=300)
+                st.plotly_chart(fig_cloro, use_container_width=True)
         else:
             st.info("No hay registros de los últimos 30 días para graficar ni mostrar.")
     else:
@@ -235,9 +275,11 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
     st.title("📄 Historial de muestras registradas")
     df = leer_datos()
     if not df.empty:
-        col1, col2 = st.columns(2)
-        min_fecha = df["Fecha"].min()
-        max_fecha = df["Fecha"].max()
+        locaciones_mostrar = sorted(df["Locación"].dropna().unique())
+        locacion_hist = st.selectbox("Locación", locaciones_mostrar)
+        df_filtrado = df[df["Locación"] == locacion_hist]
+        min_fecha = df_filtrado["Fecha"].min()
+        max_fecha = df_filtrado["Fecha"].max()
         if pd.isnull(min_fecha):
             min_fecha = datetime.now().date()
         else:
@@ -246,12 +288,32 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
             max_fecha = datetime.now().date()
         else:
             max_fecha = max_fecha.date()
+        col1, col2 = st.columns(2)
         with col1:
             fecha_ini = st.date_input("Desde", value=min_fecha)
         with col2:
             fecha_fin = st.date_input("Hasta", value=max_fecha)
-        filtrado = df[(df["Fecha"] >= pd.to_datetime(fecha_ini)) & (df["Fecha"] <= pd.to_datetime(fecha_fin))]
-        st.dataframe(filtrado)
+        filtrado = df_filtrado[(df_filtrado["Fecha"] >= pd.to_datetime(fecha_ini)) & (df_filtrado["Fecha"] <= pd.to_datetime(fecha_fin))]
+        # Columnas a mostrar según locación
+        if locacion_hist in SOLO_CLORO_LOCACIONES:
+            columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+        else:
+            columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
+        # Renombrar columnas para mostrar igual que en el registro
+        rename_cols = {
+            "Turbidez (NTU)": "Turbidez (NTU)",
+            "Cloro Residual (mg/L)": "Cloro Residual (mg/L)",
+            "pH": "pH",
+            "📝 Observaciones": "📝 Observaciones",
+            "Foto": "Foto",
+            "Operador": "Operador",
+            "Fecha": "Fecha",
+            "Hora": "Hora",
+            "Locación": "Locación"
+        }
+        # Asegurarse que existen en el DataFrame (por si hay datos antiguos)
+        columnas = [c for c in columnas if c in filtrado.columns]
+        st.dataframe(filtrado[columnas].rename(columns=rename_cols))
     else:
         st.warning("No hay registros para mostrar.")
 
