@@ -201,6 +201,17 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
         loc_norm = locacion_seleccionada.strip().lower()
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
+        # ---- FIX DECIMALES para gráficos
+        for col in ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]:
+            if col in ultimos_30.columns:
+                ultimos_30[col] = (
+                    ultimos_30[col]
+                    .astype(str)
+                    .str.replace(",", ".", regex=False)
+                    .replace("", None)
+                    .astype(float)
+                )
+        # ---------------
         if not ultimos_30.empty:
             if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
                 # Solo mostrar cloro residual
@@ -298,12 +309,21 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
         with col2:
             fecha_fin = st.date_input("Hasta", value=max_fecha)
         filtrado = df_filtrado[(df_filtrado["Fecha"] >= pd.to_datetime(fecha_ini)) & (df_filtrado["Fecha"] <= pd.to_datetime(fecha_fin))]
+        # ---- FIX DECIMALES para historial
+        for col in ["pH", "Turbidez (NTU)", "Cloro Residual (mg/L)"]:
+            if col in filtrado.columns:
+                filtrado[col] = (
+                    filtrado[col]
+                    .astype(str)
+                    .str.replace(",", ".", regex=False)
+                    .replace("", None)
+                    .astype(float)
+                )
         # Columnas a mostrar según locación
         if loc_hist_norm in SOLO_CLORO_LOCACIONES_NORM:
             columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
         else:
             columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
-        # Asegurarse que existen en el DataFrame (por si hay datos antiguos)
         columnas = [c for c in columnas if c in filtrado.columns]
         st.dataframe(filtrado[columnas])
     else:
