@@ -147,29 +147,24 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     now = datetime.now(tz)
     usuario_actual = st.session_state.get("usuario", "")
     is_admin = usuario_actual == "admin"
-    
-    # 1. Operador
-    if is_admin:
-        with col1:
+
+    with col1:
+        # Operador
+        if is_admin:
             tecnico = st.selectbox("👷 Operador", tecnicos)
-    else:
-        nombre_tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
-        with col1:
+        else:
+            nombre_tecnico = USUARIOS_NOMBRES.get(usuario_actual, usuario_actual)
             st.markdown("**👷 Operador**")
             st.info(f"{nombre_tecnico}")
-        tecnico = nombre_tecnico
+            tecnico = nombre_tecnico
 
-    # 2. Fecha SIEMPRE
-    with col1:
+        # Fecha
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
-    # 3. Hora de toma SIEMPRE justo después de fecha
-    with col1:
+        # Hora de toma de muestra, aquí SIEMPRE aparece
         hora_muestra = st.time_input("Hora de toma de muestra", value=now.time())
-    # 4. Locación SIEMPRE después de hora
-    with col1:
+        # Locación
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
 
-    # 5. Parámetros de agua
     with col2:
         loc_norm = locacion.strip().lower()
         if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
@@ -183,7 +178,6 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
 
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
-
     hora_registro = now.strftime("%H:%M:%S")
 
     if st.button("Guardar muestra"):
