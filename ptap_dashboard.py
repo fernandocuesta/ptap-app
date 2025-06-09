@@ -148,7 +148,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     usuario_actual = st.session_state.get("usuario", "")
     is_admin = usuario_actual == "admin"
     
-    # Operador: admin elige, usuarios normales no editan
+    # Operador
     if is_admin:
         with col1:
             tecnico = st.selectbox("👷 Operador", tecnicos)
@@ -159,11 +159,11 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             st.info(f"{nombre_tecnico}")
         tecnico = nombre_tecnico
 
+    # Fecha y hora de toma SIEMPRE visibles antes de locación
     with col1:
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
         hora_muestra = st.time_input("Hora de toma de muestra", value=now.time())
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
-    
     # Mostrar campos según locación
     with col2:
         loc_norm = locacion.strip().lower()
