@@ -14,7 +14,6 @@ USUARIOS = {
     "jsoto": "jsoto2025",
 }
 
-# Relación usuario->nombre completo
 USUARIOS_NOMBRES = {
     "jperez": "Jorge Perez Padilla",
     "lsangama": "Luis Sangama Ricopa",
@@ -57,15 +56,15 @@ def guardar_muestra(muestra):
 
 tecnicos = ["Luis Sangama Ricopa", "Jorge Perez Padilla", "Jose Soto Dávila"]
 locaciones = [
-    "Planta de Agua Potable" , "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
-    "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
+    "Planta de Agua Potable", "Cocina", "Equipo Purificador - PTAP", "Dispensador - Comedor 2",
+    "Dispensador - Oficina Gerencia", "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
 ]
 
-# Locaciones donde solo se debe registrar cloro residual
 SOLO_CLORO_LOCACIONES = [
     "Equipo Purificador - PTAP", "Dispensador - Comedor 2", "Dispensador - Oficina Gerencia",
     "Dispensador - HSE 01", "Dispensador - HSE 02", "Dispensador - Producción"
 ]
+SOLO_CLORO_LOCACIONES_NORM = [x.strip().lower() for x in SOLO_CLORO_LOCACIONES]
 
 # === Estado inicial de sesión y navegación ===
 if "logueado" not in st.session_state:
@@ -163,7 +162,8 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     
     # Mostrar campos según locación
     with col2:
-        if locacion in SOLO_CLORO_LOCACIONES:
+        loc_norm = locacion.strip().lower()
+        if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
             ph = ""
             turbidez = ""
             cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
@@ -195,11 +195,14 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Resultados de Monitoreo de Parámetros en Agua Potable")
     df = leer_datos()
     if not df.empty:
-        locacion_seleccionada = st.selectbox("Locación", sorted(df["Locación"].dropna().unique()))
+        # Normalizar lista SOLO_CLORO_LOCACIONES para comparación
+        locaciones_mostrar = sorted(df["Locación"].dropna().unique())
+        locacion_seleccionada = st.selectbox("Locación", locaciones_mostrar)
+        loc_norm = locacion_seleccionada.strip().lower()
         df_filtrado = df[df["Locación"] == locacion_seleccionada]
         ultimos_30 = df_filtrado[df_filtrado["Fecha"] >= datetime.now() - pd.Timedelta(days=30)].sort_values("Fecha")
         if not ultimos_30.empty:
-            if locacion_seleccionada in SOLO_CLORO_LOCACIONES:
+            if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
                 # Solo mostrar cloro residual
                 st.subheader("Cloro Residual (mg/L)")
                 fig_cloro = go.Figure()
@@ -277,6 +280,7 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
     if not df.empty:
         locaciones_mostrar = sorted(df["Locación"].dropna().unique())
         locacion_hist = st.selectbox("Locación", locaciones_mostrar)
+        loc_hist_norm = locacion_hist.strip().lower()
         df_filtrado = df[df["Locación"] == locacion_hist]
         min_fecha = df_filtrado["Fecha"].min()
         max_fecha = df_filtrado["Fecha"].max()
@@ -295,25 +299,13 @@ elif st.session_state['menu'] == "📄 Historial" and st.session_state['logueado
             fecha_fin = st.date_input("Hasta", value=max_fecha)
         filtrado = df_filtrado[(df_filtrado["Fecha"] >= pd.to_datetime(fecha_ini)) & (df_filtrado["Fecha"] <= pd.to_datetime(fecha_fin))]
         # Columnas a mostrar según locación
-        if locacion_hist in SOLO_CLORO_LOCACIONES:
+        if loc_hist_norm in SOLO_CLORO_LOCACIONES_NORM:
             columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
         else:
             columnas = ['Fecha', 'Hora', 'Operador', 'Locación', 'pH', 'Turbidez (NTU)', 'Cloro Residual (mg/L)', '📝 Observaciones', 'Foto']
-        # Renombrar columnas para mostrar igual que en el registro
-        rename_cols = {
-            "Turbidez (NTU)": "Turbidez (NTU)",
-            "Cloro Residual (mg/L)": "Cloro Residual (mg/L)",
-            "pH": "pH",
-            "📝 Observaciones": "📝 Observaciones",
-            "Foto": "Foto",
-            "Operador": "Operador",
-            "Fecha": "Fecha",
-            "Hora": "Hora",
-            "Locación": "Locación"
-        }
         # Asegurarse que existen en el DataFrame (por si hay datos antiguos)
         columnas = [c for c in columnas if c in filtrado.columns]
-        st.dataframe(filtrado[columnas].rename(columns=rename_cols))
+        st.dataframe(filtrado[columnas])
     else:
         st.warning("No hay registros para mostrar.")
 
