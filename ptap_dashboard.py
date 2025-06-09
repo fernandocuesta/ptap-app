@@ -148,7 +148,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
     usuario_actual = st.session_state.get("usuario", "")
     is_admin = usuario_actual == "admin"
     
-    # Operador
+    # 1. Operador
     if is_admin:
         with col1:
             tecnico = st.selectbox("👷 Operador", tecnicos)
@@ -159,12 +159,17 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             st.info(f"{nombre_tecnico}")
         tecnico = nombre_tecnico
 
-    # Fecha y hora de toma SIEMPRE visibles antes de locación
+    # 2. Fecha SIEMPRE
     with col1:
         fecha = st.date_input("Fecha", value=now.date(), max_value=now.date())
+    # 3. Hora de toma SIEMPRE justo después de fecha
+    with col1:
         hora_muestra = st.time_input("Hora de toma de muestra", value=now.time())
+    # 4. Locación SIEMPRE después de hora
+    with col1:
         locacion = st.selectbox("📍 Locación de muestreo", locaciones)
-    # Mostrar campos según locación
+
+    # 5. Parámetros de agua
     with col2:
         loc_norm = locacion.strip().lower()
         if loc_norm in SOLO_CLORO_LOCACIONES_NORM:
@@ -175,6 +180,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
             ph = st.number_input("pH", min_value=0.0, max_value=14.0, step=0.1)
             turbidez = st.number_input("Turbidez (NTU)", min_value=0.0, step=0.1)
             cloro = st.number_input("Cloro Residual (mg/L)", min_value=0.0, step=0.1)
+
     observaciones = st.text_area("📝 Observaciones")
     foto = st.file_uploader("📷 Adjuntar foto (opcional)", type=["jpg", "jpeg", "png"])
 
@@ -198,6 +204,7 @@ if st.session_state['menu'] == "➕ Ingreso de muestra" and st.session_state['lo
         ]
         guardar_muestra(muestra)
         st.success("✅ Registro guardado en Google Sheets correctamente.")
+
 
 elif st.session_state['menu'] == "📊 KPIs y Análisis":
     st.title("📊 Resultados de Monitoreo de Parámetros en Agua Potable")
