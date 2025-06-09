@@ -229,7 +229,7 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
             else:
                 for param, color, rango, subtitulo in [
                     ("pH", "blue", [(6.5, 8.5, "green", 0.15), (6.0, 9.0, "yellow", 0.12), (0, 6.0, "red", 0.07), (9.0, 14.0, "red", 0.07)], "pH"),
-                    ("Turbidez (NTU)", "orange", [(0, 5, "green", 0.15), (5, 10, "yellow", 0.13), (10, 100, "red", 0.09)], "Turbidez (NTU)"),
+                    ("Turbidez (NTU)", "orange", [(0, 5, "green", 0.15), (5, 10, "yellow", 0.13), (10, 20, "red", 0.09)], "Turbidez (NTU)"),
                     ("Cloro Residual (mg/L)", "purple", [(0.5, 1.5, "green", 0.15), (0.2, 0.5, "yellow", 0.13), (1.5, 2.0, "yellow", 0.13), (0, 0.2, "red", 0.07), (2.0, 5, "red", 0.07)], "Cloro Residual (mg/L)")
                 ]:
                     st.subheader(subtitulo)
