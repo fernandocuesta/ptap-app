@@ -223,7 +223,7 @@ elif st.session_state['menu'] == "📊 KPIs y Análisis":
                 fig_cloro.add_hrect(y0=0.2, y1=0.5, fillcolor="yellow", opacity=0.13, line_width=0)
                 fig_cloro.add_hrect(y0=1.5, y1=2.0, fillcolor="yellow", opacity=0.13, line_width=0)
                 fig_cloro.add_hrect(y0=0, y1=0.2, fillcolor="red", opacity=0.07, line_width=0)
-                fig_cloro.add_hrect(y0=2.0, y1=5, fillcolor="red", opacity=0.07, line_width=0)
+                fig_cloro.add_hrect(y0=2.0, y1=3, fillcolor="red", opacity=0.07, line_width=0)
                 fig_cloro.update_layout(yaxis_title="Cloro Residual (mg/L)", xaxis_title="Fecha y hora de muestra", height=300)
                 st.plotly_chart(fig_cloro, use_container_width=True)
             else:
