@@ -5,3 +5,4 @@ fpdf
 pillow
 gspread
 google-auth
+pytz
