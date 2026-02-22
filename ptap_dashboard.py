@@ -179,8 +179,14 @@ CUSTOM_CSS = """
         background: linear-gradient(180deg, #0c1829 0%, #132f4c 100%);
     }
     section[data-testid="stSidebar"] .stMarkdown,
+    section[data-testid="stSidebar"] .stMarkdown p,
     section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stRadio label {
+    section[data-testid="stSidebar"] .stRadio label,
+    section[data-testid="stSidebar"] .stRadio div,
+    section[data-testid="stSidebar"] .stRadio p,
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] p {
         color: #e2e8f0 !important;
     }
     section[data-testid="stSidebar"] hr {
@@ -545,11 +551,14 @@ def crear_heatmap_cumplimiento(df: pd.DataFrame, dias: int = 30) -> go.Figure:
         hovertemplate="<b>%{y}</b><br>%{x}<br>Cumplimiento: %{z:.0f}%<extra></extra>",
         colorbar=dict(title="% Cumpl.", ticksuffix="%", len=0.6),
     ))
+    chart_cfg = dict(CHART_TEMPLATE)
+    chart_cfg.pop("xaxis", None)
+    chart_cfg.pop("yaxis", None)
     fig.update_layout(
-        **CHART_TEMPLATE,
+        **chart_cfg,
         height=max(300, len(pivot) * 45 + 100),
-        yaxis=dict(autorange="reversed"),
-        xaxis=dict(tickangle=-45, tickfont_size=10),
+        yaxis=dict(gridcolor="rgba(203,213,225,0.4)", showgrid=True, autorange="reversed"),
+        xaxis=dict(gridcolor="rgba(203,213,225,0.4)", showgrid=True, tickangle=-45, tickfont_size=10),
     )
     return fig
 
