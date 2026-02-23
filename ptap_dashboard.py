@@ -68,6 +68,11 @@ CUSTOM_CSS = """
         font-family: 'DM Sans', sans-serif;
     }
 
+    /* --- Reducir espacio superior --- */
+    .block-container {
+        padding-top: 1rem !important;
+    }
+
     /* --- Header bar --- */
     .ptap-header {
         background: linear-gradient(135deg, #0c1829 0%, #1a3a5c 50%, #0d7377 100%);
@@ -203,6 +208,15 @@ CUSTOM_CSS = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+
+    /* --- Mantener visible el botón de colapso del sidebar --- */
+    [data-testid="collapsedControl"] {
+        visibility: visible !important;
+    }
+    button[kind="headerNoPadding"],
+    [data-testid="stSidebarCollapseButton"] {
+        visibility: visible !important;
+    }
 </style>
 """
 
@@ -606,7 +620,7 @@ def pagina_dashboard(df: pd.DataFrame):
     """Dashboard ejecutivo con KPIs y gráficos."""
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
-    # --- Selector de período ---
+    # --- Selectores de período y locación en la misma fila ---
     col_periodo, col_loc, _ = st.columns([1, 1, 2])
     with col_periodo:
         periodo = st.selectbox("📅 Período", ["Últimos 7 días", "Últimos 15 días", "Últimos 30 días", "Todo"], index=2)
@@ -614,6 +628,14 @@ def pagina_dashboard(df: pd.DataFrame):
     dias = dias_map[periodo]
     ahora = datetime.now()
     df_periodo = df[df["Fecha_Hora"] >= ahora - timedelta(days=dias)].copy() if dias < 9999 else df.copy()
+
+    locaciones_disp_init = sorted(df_periodo["Locación"].dropna().unique())
+    with col_loc:
+        if locaciones_disp_init:
+            loc_sel_init = st.selectbox("📍 Locación", locaciones_disp_init)
+        else:
+            st.info("Sin datos para el período.")
+            loc_sel_init = None
 
     # --- KPIs ejecutivos ---
     resumen = resumen_ejecutivo(df, dias)
@@ -656,13 +678,9 @@ def pagina_dashboard(df: pd.DataFrame):
 
     # --- Gráficos por locación ---
     st.markdown("### 📍 Análisis por Locación")
-    with col_loc:
-        locaciones_disp = sorted(df_periodo["Locación"].dropna().unique())
-        if locaciones_disp:
-            loc_sel = st.selectbox("Locación", locaciones_disp, label_visibility="collapsed")
-        else:
-            st.info("Sin datos para el período.")
-            return
+    if loc_sel_init is None:
+        return
+    loc_sel = loc_sel_init
 
     df_loc = df_periodo[df_periodo["Locación"] == loc_sel].sort_values("Fecha_Hora")
     loc_norm = loc_sel.strip().lower()
@@ -705,24 +723,7 @@ def pagina_dashboard(df: pd.DataFrame):
             key=f"chart_{loc_sel}_{param}"
         )
 
-    # --- Heatmap global ---
-    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
-    st.markdown("### 🗓️ Mapa de Cumplimiento Diario (Cloro Residual)")
-    fig_heat = crear_heatmap_cumplimiento(df_periodo, dias if dias < 9999 else 60)
-    if fig_heat.data:
-        st.plotly_chart(fig_heat, use_container_width=True)
-    else:
-        st.info("Sin datos suficientes para generar el heatmap.")
 
-    # --- Tendencias globales ---
-    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
-    st.markdown("### 📈 Tendencia Comparativa por Locación")
-    param_tend = st.selectbox("Parámetro", list(LIMITES.keys()), key="tendencia_param")
-    fig_tend = crear_grafico_tendencia_global(df_periodo, param_tend)
-    if fig_tend.data:
-        st.plotly_chart(fig_tend, use_container_width=True)
-    else:
-        st.info("Sin datos para mostrar.")
 
 
 def pagina_ingreso():
